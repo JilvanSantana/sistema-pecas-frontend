@@ -18,12 +18,15 @@ import {
   DialogActions,
   TextField,
   MenuItem,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Add, Download } from '@mui/icons-material';
+import { Add, Download, QrCode } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { exportarEquipamentos } from '../services/exportar';
+import QrCodeModal from '../components/QrCodeModal';
 
 interface Equipamento {
   id: string;
@@ -54,6 +57,7 @@ const Equipamentos: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [bases, setBases] = useState<any[]>([]);
+  const [qrSelecionado, setQrSelecionado] = useState<Equipamento | null>(null);
   const [form, setForm] = useState({
     tipo: '',
     modelo: '',
@@ -120,7 +124,7 @@ const Equipamentos: React.FC = () => {
                 <TableCell sx={{ color: 'white' }}>Localização</TableCell>
                 <TableCell sx={{ color: 'white' }}>Base</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
-                <TableCell sx={{ color: 'white' }}>QR Code</TableCell>
+                <TableCell sx={{ color: 'white' }}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -138,12 +142,28 @@ const Equipamentos: React.FC = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: '#666' }}>{eq.qr_code}</TableCell>
+                  <TableCell>
+                    <Tooltip title="Ver QR Code">
+                      <IconButton color="primary" onClick={() => setQrSelecionado(eq)}>
+                        <QrCode />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {qrSelecionado && (
+        <QrCodeModal
+          aberto={!!qrSelecionado}
+          onFechar={() => setQrSelecionado(null)}
+          codigo={qrSelecionado.qr_code}
+          descricao={qrSelecionado.modelo}
+          categoria={qrSelecionado.tipo}
+        />
       )}
 
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
