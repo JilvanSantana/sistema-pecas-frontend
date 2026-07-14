@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 interface ResumoEquipamento {
   total: number;
@@ -32,6 +33,7 @@ interface ResumoPeca {
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [resumoEquipamento, setResumoEquipamento] = useState<ResumoEquipamento | null>(null);
   const [resumoPeca, setResumoPeca] = useState<ResumoPeca | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -61,6 +63,7 @@ const Dashboard: React.FC = () => {
       total: resumoEquipamento?.total ?? 0,
       icone: <Build sx={{ fontSize: 40, color: '#1976d2' }} />,
       cor: '#e3f2fd',
+      rota: '/equipamentos?status=ativo',
     },
     {
       titulo: 'Equipamentos Parados',
@@ -68,6 +71,7 @@ const Dashboard: React.FC = () => {
       total: resumoEquipamento?.total ?? 0,
       icone: <Warning sx={{ fontSize: 40, color: '#d32f2f' }} />,
       cor: '#ffebee',
+      rota: '/equipamentos?status=inativo_aguardando_peca',
     },
     {
       titulo: 'Peças em Estoque',
@@ -75,6 +79,7 @@ const Dashboard: React.FC = () => {
       total: resumoPeca?.total ?? 0,
       icone: <Inventory sx={{ fontSize: 40, color: '#388e3c' }} />,
       cor: '#e8f5e9',
+      rota: '/pecas?status=em_estoque_base',
     },
     {
       titulo: 'Peças em Trânsito',
@@ -82,6 +87,7 @@ const Dashboard: React.FC = () => {
       total: resumoPeca?.total ?? 0,
       icone: <LocalShipping sx={{ fontSize: 40, color: '#f57c00' }} />,
       cor: '#fff3e0',
+      rota: '/pecas?status=em_transito',
     },
   ];
 
@@ -99,7 +105,18 @@ const Dashboard: React.FC = () => {
         <Grid container spacing={3} columns={12}>
           {cards.map((card, index) => (
             <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-              <Card sx={{ backgroundColor: card.cor }}>
+              <Card
+                sx={{
+                  backgroundColor: card.cor,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 4,
+                  },
+                }}
+                onClick={() => navigate(card.rota)}
+              >
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
