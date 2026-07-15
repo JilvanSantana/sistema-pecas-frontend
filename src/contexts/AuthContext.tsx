@@ -35,6 +35,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, senha: string) => {
     const response = await api.post('/auth/login', { email, senha });
     const { access_token, usuario } = response.data;
+
+    if (usuario.papel === 'tecnico') {
+      throw new Error('ACESSO_NEGADO_TECNICO');
+    }
+
     localStorage.setItem('token', access_token);
     localStorage.setItem('usuario', JSON.stringify(usuario));
     setToken(access_token);

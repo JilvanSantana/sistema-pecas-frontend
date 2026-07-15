@@ -29,8 +29,12 @@ const Login: React.FC = () => {
       setErro('');
       await login(email, senha);
       navigate('/dashboard');
-    } catch (error) {
-      setErro('Email ou senha inválidos');
+    } catch (error: any) {
+      if (error.message === 'ACESSO_NEGADO_TECNICO') {
+        setErro('Acesso negado. Técnicos devem usar o app móvel ControlePeças.');
+      } else {
+        setErro('Email ou senha inválidos');
+      }
     } finally {
       setCarregando(false);
     }
