@@ -21,6 +21,7 @@ import {
   Factory,
   Assignment,
   Warning,
+  VerifiedUser,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -30,6 +31,7 @@ const itensMenu = [
   { texto: 'Dashboard', icone: <Dashboard />, rota: '/dashboard' },
   { texto: 'Ordens de Serviço', icone: <Assignment />, rota: '/ordens-servico' },
   { texto: 'Equipamentos', icone: <Build />, rota: '/equipamentos' },
+  { texto: 'Aferições', icone: <VerifiedUser />, rota: '/afericoes' },
   { texto: 'Peças', icone: <Inventory />, rota: '/pecas' },
   { texto: 'Movimentações', icone: <LocalShipping />, rota: '/movimentacoes' },
   { texto: 'Aguardando Remessa', icone: <Warning sx={{ color: '#ff9800' }} />, rota: '/aguardando-remessa' },

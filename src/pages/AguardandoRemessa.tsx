@@ -133,7 +133,7 @@ const AguardandoRemessa: React.FC = () => {
       ) : pecas.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center', color: '#666' }}>
           <Typography variant="h6">✅ Nenhuma peça aguardando remessa</Typography>
-          <Typography variant="body2" mt={1}>
+          <Typography variant="body2" sx={{ mt: 1 }}>
             Todas as peças defeituosas já foram enviadas para a sede.
           </Typography>
         </Paper>

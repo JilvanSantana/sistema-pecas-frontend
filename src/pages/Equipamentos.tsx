@@ -32,8 +32,10 @@ interface Equipamento {
   id: string;
   tipo: string;
   modelo: string;
+  fabricante: string;
   numero_serie: string;
   localizacao_instalacao: string;
+  quantidade_faixas: number | null;
   status_operacional: string;
   qr_code: string;
   base: { nome: string; estado: string };
@@ -64,6 +66,7 @@ const Equipamentos: React.FC = () => {
     fabricante: '',
     numero_serie: '',
     localizacao_instalacao: '',
+    quantidade_faixas: '',
     base_responsavel_id: '',
   });
 
@@ -84,9 +87,12 @@ const Equipamentos: React.FC = () => {
 
   const handleSalvar = async () => {
     try {
-      await api.post('/equipamento', form);
+      await api.post('/equipamento', {
+        ...form,
+        quantidade_faixas: form.quantidade_faixas ? parseInt(form.quantidade_faixas, 10) : undefined,
+      });
       setAbrirDialog(false);
-      setForm({ tipo: '', modelo: '', fabricante: '', numero_serie: '', localizacao_instalacao: '', base_responsavel_id: '' });
+      setForm({ tipo: '', modelo: '', fabricante: '', numero_serie: '', localizacao_instalacao: '', quantidade_faixas: '', base_responsavel_id: '' });
       carregarDados();
     } catch (error) {
       console.error(error);
@@ -120,8 +126,10 @@ const Equipamentos: React.FC = () => {
               <TableRow sx={{ backgroundColor: '#1a237e' }}>
                 <TableCell sx={{ color: 'white' }}>Tipo</TableCell>
                 <TableCell sx={{ color: 'white' }}>Modelo</TableCell>
+                <TableCell sx={{ color: 'white' }}>Fabricante</TableCell>
                 <TableCell sx={{ color: 'white' }}>Nº Série</TableCell>
                 <TableCell sx={{ color: 'white' }}>Localização</TableCell>
+                <TableCell sx={{ color: 'white' }}>Faixas</TableCell>
                 <TableCell sx={{ color: 'white' }}>Base</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
                 <TableCell sx={{ color: 'white' }}>Ações</TableCell>
@@ -132,8 +140,10 @@ const Equipamentos: React.FC = () => {
                 <TableRow key={eq.id} hover>
                   <TableCell sx={{ textTransform: 'capitalize' }}>{eq.tipo}</TableCell>
                   <TableCell>{eq.modelo}</TableCell>
+                  <TableCell>{eq.fabricante || '-'}</TableCell>
                   <TableCell>{eq.numero_serie}</TableCell>
                   <TableCell>{eq.localizacao_instalacao}</TableCell>
+                  <TableCell>{eq.quantidade_faixas ?? '-'}</TableCell>
                   <TableCell>{eq.base?.nome} - {eq.base?.estado}</TableCell>
                   <TableCell>
                     <Chip
@@ -177,7 +187,8 @@ const Equipamentos: React.FC = () => {
           <TextField fullWidth label="Modelo" value={form.modelo} onChange={(e) => setForm({ ...form, modelo: e.target.value })} sx={{ mb: 2 }} />
           <TextField fullWidth label="Fabricante" value={form.fabricante} onChange={(e) => setForm({ ...form, fabricante: e.target.value })} sx={{ mb: 2 }} />
           <TextField fullWidth label="Número de Série" value={form.numero_serie} onChange={(e) => setForm({ ...form, numero_serie: e.target.value })} sx={{ mb: 2 }} />
-          <TextField fullWidth label="Localização (rodovia/km)" value={form.localizacao_instalacao} onChange={(e) => setForm({ ...form, localizacao_instalacao: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Localização (rodovia/km/endereço)" value={form.localizacao_instalacao} onChange={(e) => setForm({ ...form, localizacao_instalacao: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth type="number" label="Quantidade de Faixas" value={form.quantidade_faixas} onChange={(e) => setForm({ ...form, quantidade_faixas: e.target.value })} sx={{ mb: 2 }} />
           <TextField select fullWidth label="Base Responsável" value={form.base_responsavel_id} onChange={(e) => setForm({ ...form, base_responsavel_id: e.target.value })}>
             {bases.map((base) => (
               <MenuItem key={base.id} value={base.id}>{base.nome} - {base.estado}</MenuItem>
