@@ -31,7 +31,7 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (error: any) {
       if (error.message === 'ACESSO_NEGADO_TECNICO') {
-        setErro('Acesso negado. Técnicos devem usar o app móvel ControlePeças.');
+        setErro('Acesso negado. Técnicos devem usar o app móvel Nexo.');
       } else {
         setErro('Email ou senha inválidos');
       }
@@ -44,11 +44,23 @@ const Login: React.FC = () => {
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f2f5' }}>
       <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
         <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-            ControlePeças
+          <Box
+            component="img"
+            src={`${process.env.PUBLIC_URL}/logo512.png?v=2`}
+            alt="Nexo"
+            sx={{
+              width: 88,
+              height: 88,
+              borderRadius: '20px',
+              mb: 2,
+              boxShadow: '0 4px 14px rgba(26, 35, 126, 0.35)',
+            }}
+          />
+          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a237e' }}>
+            Nexo
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Sistema de Controle de Peças
+            by ROTAPRO — Sistema de Compliance e Rastreabilidade
           </Typography>
         </Box>
 
@@ -58,7 +70,7 @@ const Login: React.FC = () => {
 
         <TextField fullWidth label="Senha" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} sx={{ mb: 3 }} />
 
-        <Button fullWidth variant="contained" size="large" onClick={handleLogin} disabled={carregando}>
+        <Button fullWidth variant="contained" size="large" onClick={handleLogin} disabled={carregando} sx={{ backgroundColor: '#1a237e', '&:hover': { backgroundColor: '#0d1757' } }}>
           {carregando ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
         </Button>
       </Paper>

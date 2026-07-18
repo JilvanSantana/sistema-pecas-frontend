@@ -230,7 +230,7 @@ const Equipamentos: React.FC = () => {
                     <TableCell>{eq.localizacao_instalacao}</TableCell>
                     <TableCell>{eq.quantidade_faixas ?? '-'}</TableCell>
                     <TableCell>{eq.base?.nome} - {eq.base?.estado}</TableCell>
-                    <TableCell>{eq.contrato ? eq.contrato.numero_contrato : '-'}</TableCell>
+                    <TableCell>{eq.contrato ? `${eq.contrato.numero_contrato} - ${eq.contrato.orgao_contratante}` : '-'}</TableCell>
                     <TableCell>
                       <Chip
                         label={statusLabels[eq.status_operacional] || eq.status_operacional}

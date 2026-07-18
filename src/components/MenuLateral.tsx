@@ -61,13 +61,21 @@ const MenuLateral: React.FC = () => {
       }}
     >
       <Toolbar>
-        <Box sx={{ py: 1 }}>
-          <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-            ControlePeças
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#90caf9' }}>
-            Sistema de Fiscalização
-          </Typography>
+        <Box sx={{ py: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            component="img"
+            src={`${process.env.PUBLIC_URL}/logo-nexo-transparente.png?v=2`}
+            alt="Nexo"
+            sx={{ width: 34, height: 34 }}
+          />
+          <Box>
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', lineHeight: 1.1 }}>
+              Nexo
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#90caf9' }}>
+              by ROTAPRO
+            </Typography>
+          </Box>
         </Box>
       </Toolbar>
       <Divider sx={{ borderColor: '#3949ab' }} />

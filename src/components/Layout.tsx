@@ -17,7 +17,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            ControlePeças — {usuario?.papel === 'admin_global' ? 'Sede' : 'Base'}
+            Nexo — {usuario?.papel === 'admin_global' ? 'Sede' : 'Base'}
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             {usuario?.nome}

@@ -156,7 +156,7 @@ const Afericoes: React.FC = () => {
                       <TableCell>{new Date(a.data_validade).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{a.orgao_responsavel}</TableCell>
                       <TableCell>{a.numero_certificado || '-'}</TableCell>
-                      <TableCell>{a.equipamento?.contrato?.numero_contrato || '-'}</TableCell>
+                      <TableCell>{a.equipamento?.contrato ? `${a.equipamento.contrato.numero_contrato} - ${a.equipamento.contrato.orgao_contratante}` : '-'}</TableCell>
                       <TableCell>
                         <Chip label={status.label} color={status.color} size="small" />
                       </TableCell>
