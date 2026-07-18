@@ -31,6 +31,8 @@ import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { exportarMovimentacoes } from '../services/exportar';
+import AlertaChip from '../components/AlertaChip';
+import { calcularTempoAberto } from '../utils/prazos';
 
 interface Movimentacao {
   id: string;
@@ -68,6 +70,10 @@ const motivoLabels: Record<string, string> = {
   reparo_fabricante: 'Reparo no Fabricante',
   outro: 'Outro',
 };
+
+// Prazos de referência (em dias) para peças aguardando envio/retorno
+const LIMITE_ATENCAO_DIAS = 7;
+const LIMITE_CRITICO_DIAS = 15;
 
 const Movimentacoes: React.FC = () => {
   const { usuario } = useAuth();
@@ -141,6 +147,8 @@ const Movimentacoes: React.FC = () => {
     }
   };
 
+  const estaAguardando = (status: string) => status === 'enviada' || status === 'em_transito';
+
   return (
     <Layout>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -173,44 +181,53 @@ const Movimentacoes: React.FC = () => {
                 <TableCell sx={{ color: 'white' }}>Parada</TableCell>
                 <TableCell sx={{ color: 'white' }}>Data</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
+                <TableCell sx={{ color: 'white' }}>Tempo Aguardando</TableCell>
                 <TableCell sx={{ color: 'white' }}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {movimentacoes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4, color: '#666' }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 4, color: '#666' }}>
                     Nenhuma movimentação registrada ainda
                   </TableCell>
                 </TableRow>
               ) : (
-                movimentacoes.map((mov) => (
-                  <TableRow key={mov.id} hover>
-                    <TableCell>
-                      <Typography variant="body2">{mov.peca?.descricao}</Typography>
-                      <Typography variant="caption" color="text.secondary">{mov.peca?.codigo_qr}</Typography>
-                    </TableCell>
-                    <TableCell>{motivoLabels[mov.motivo_envio] || mov.motivo_envio}</TableCell>
-                    <TableCell>{mov.origem_tipo} → {mov.destino_tipo}</TableCell>
-                    <TableCell>{mov.codigo_rastreio || '-'}</TableCell>
-                    <TableCell>
-                      <Chip label={mov.causou_parada ? 'Sim' : 'Não'} color={mov.causou_parada ? 'error' : 'success'} size="small" />
-                    </TableCell>
-                    <TableCell>{new Date(mov.data_envio).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>
-                      <Chip label={statusLabels[mov.status] || mov.status} color={statusCores[mov.status] || 'default'} size="small" />
-                    </TableCell>
-                    <TableCell>
-                      {(mov.status === 'enviada' || mov.status === 'em_transito') && (
-                        <Tooltip title="Confirmar Recebimento">
-                          <IconButton color="success" onClick={() => handleAbrirConfirmar(mov.id)}>
-                            <CheckCircle />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                movimentacoes.map((mov) => {
+                  const prazo = estaAguardando(mov.status)
+                    ? calcularTempoAberto(mov.data_envio, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS)
+                    : null;
+                  return (
+                    <TableRow key={mov.id} hover>
+                      <TableCell>
+                        <Typography variant="body2">{mov.peca?.descricao}</Typography>
+                        <Typography variant="caption" color="text.secondary">{mov.peca?.codigo_qr}</Typography>
+                      </TableCell>
+                      <TableCell>{motivoLabels[mov.motivo_envio] || mov.motivo_envio}</TableCell>
+                      <TableCell>{mov.origem_tipo} → {mov.destino_tipo}</TableCell>
+                      <TableCell>{mov.codigo_rastreio || '-'}</TableCell>
+                      <TableCell>
+                        <Chip label={mov.causou_parada ? 'Sim' : 'Não'} color={mov.causou_parada ? 'error' : 'success'} size="small" />
+                      </TableCell>
+                      <TableCell>{new Date(mov.data_envio).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>
+                        <Chip label={statusLabels[mov.status] || mov.status} color={statusCores[mov.status] || 'default'} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        {prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {(mov.status === 'enviada' || mov.status === 'em_transito') && (
+                          <Tooltip title="Confirmar Recebimento">
+                            <IconButton color="success" onClick={() => handleAbrirConfirmar(mov.id)}>
+                              <CheckCircle />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

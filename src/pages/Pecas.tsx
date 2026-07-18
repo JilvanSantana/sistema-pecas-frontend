@@ -32,6 +32,8 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import QrCodeModal from '../components/QrCodeModal';
 import { exportarPecas } from '../services/exportar';
+import AlertaChip from '../components/AlertaChip';
+import { calcularTempoAberto } from '../utils/prazos';
 
 interface Peca {
   id: string;
@@ -39,8 +41,14 @@ interface Peca {
   descricao: string;
   categoria: string;
   status_atual: string;
+  criado_em: string;
   base: { nome: string; estado: string } | null;
   tecnico: { usuario: { nome: string } } | null;
+}
+
+interface Movimentacao {
+  peca_id: string;
+  data_envio: string;
 }
 
 const statusCores: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
@@ -65,9 +73,15 @@ const statusLabels: Record<string, string> = {
   descartada: 'Descartada',
 };
 
+const STATUS_AGUARDANDO = ['em_transito', 'defeituosa_aguardando_analise', 'em_reparo_fabricante'];
+
+const LIMITE_ATENCAO_DIAS = 7;
+const LIMITE_CRITICO_DIAS = 15;
+
 const Pecas: React.FC = () => {
   const { usuario } = useAuth();
   const [pecas, setPecas] = useState<Peca[]>([]);
+  const [ultimaMovPorPeca, setUltimaMovPorPeca] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [abrirFabricante, setAbrirFabricante] = useState(false);
@@ -93,14 +107,25 @@ const Pecas: React.FC = () => {
 
   const carregarDados = async () => {
     try {
-      const [resPecas, resBases, resFornecedores] = await Promise.all([
+      const [resPecas, resBases, resFornecedores, resMovimentacoes] = await Promise.all([
         api.get('/peca'),
         api.get(`/empresa/${usuario?.empresa_id}/bases`),
         api.get('/fornecedor'),
+        api.get('/movimentacao'),
       ]);
       setPecas(resPecas.data);
       setBases(resBases.data);
       setFornecedores(resFornecedores.data);
+
+      const movimentacoes: Movimentacao[] = resMovimentacoes.data;
+      const maisRecentePorPeca: Record<string, string> = {};
+      movimentacoes.forEach((m) => {
+        const atual = maisRecentePorPeca[m.peca_id];
+        if (!atual || new Date(m.data_envio) > new Date(atual)) {
+          maisRecentePorPeca[m.peca_id] = m.data_envio;
+        }
+      });
+      setUltimaMovPorPeca(maisRecentePorPeca);
     } catch (error) {
       console.error(error);
     } finally {
@@ -175,52 +200,64 @@ const Pecas: React.FC = () => {
                 <TableCell sx={{ color: 'white' }}>Categoria</TableCell>
                 <TableCell sx={{ color: 'white' }}>Localização</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
+                <TableCell sx={{ color: 'white' }}>Tempo Aguardando</TableCell>
                 <TableCell sx={{ color: 'white' }}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {pecas.map((peca) => (
-                <TableRow key={peca.id} hover>
-                  <TableCell>
-                    <Typography variant="caption">{peca.codigo_qr}</Typography>
-                  </TableCell>
-                  <TableCell>{peca.descricao}</TableCell>
-                  <TableCell>{peca.categoria}</TableCell>
-                  <TableCell>
-                    {peca.base ? `${peca.base.nome} - ${peca.base.estado}` :
-                     peca.tecnico ? 'Com Técnico' :
-                     peca.status_atual === 'em_reparo_fabricante' ? 'No Fabricante' : 'Instalada'}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={statusLabels[peca.status_atual] || peca.status_atual}
-                      color={statusCores[peca.status_atual] || 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title="Ver QR Code">
-                      <IconButton color="primary" onClick={() => setQrSelecionado(peca)}>
-                        <QrCode />
-                      </IconButton>
-                    </Tooltip>
-                    {peca.status_atual === 'defeituosa_aguardando_analise' && (
-                      <Tooltip title="Enviar ao Fabricante">
-                        <IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}>
-                          <Factory />
+              {pecas.map((peca) => {
+                const precisaAlerta = STATUS_AGUARDANDO.includes(peca.status_atual);
+                const dataReferencia = ultimaMovPorPeca[peca.id] || peca.criado_em;
+                const prazo = precisaAlerta && dataReferencia
+                  ? calcularTempoAberto(dataReferencia, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS)
+                  : null;
+
+                return (
+                  <TableRow key={peca.id} hover>
+                    <TableCell>
+                      <Typography variant="caption">{peca.codigo_qr}</Typography>
+                    </TableCell>
+                    <TableCell>{peca.descricao}</TableCell>
+                    <TableCell>{peca.categoria}</TableCell>
+                    <TableCell>
+                      {peca.base ? `${peca.base.nome} - ${peca.base.estado}` :
+                       peca.tecnico ? 'Com Técnico' :
+                       peca.status_atual === 'em_reparo_fabricante' ? 'No Fabricante' : 'Instalada'}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={statusLabels[peca.status_atual] || peca.status_atual}
+                        color={statusCores[peca.status_atual] || 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Ver QR Code">
+                        <IconButton color="primary" onClick={() => setQrSelecionado(peca)}>
+                          <QrCode />
                         </IconButton>
                       </Tooltip>
-                    )}
-                    {peca.status_atual === 'em_reparo_fabricante' && (
-                      <Tooltip title="Registrar Retorno do Fabricante">
-                        <IconButton color="success" onClick={() => { setPecaSelecionada(peca); setAbrirRetorno(true); }}>
-                          <AssignmentReturn />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                      {peca.status_atual === 'defeituosa_aguardando_analise' && (
+                        <Tooltip title="Enviar ao Fabricante">
+                          <IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}>
+                            <Factory />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {peca.status_atual === 'em_reparo_fabricante' && (
+                        <Tooltip title="Registrar Retorno do Fabricante">
+                          <IconButton color="success" onClick={() => { setPecaSelecionada(peca); setAbrirRetorno(true); }}>
+                            <AssignmentReturn />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>

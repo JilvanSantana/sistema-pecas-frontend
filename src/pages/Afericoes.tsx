@@ -19,15 +19,17 @@ import {
   TextField,
   MenuItem,
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, Download } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import { exportarAfericoes } from '../services/exportar';
 
 interface Equipamento {
   id: string;
   tipo: string;
   numero_serie?: string;
   localizacao_instalacao: string;
+  contrato?: { numero_contrato: string; orgao_contratante: string } | null;
 }
 
 interface Afericao {
@@ -47,7 +49,7 @@ const calcularStatus = (dataValidade: string) => {
   const diasRestantes = Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diasRestantes < 0) return { label: 'Vencida', color: 'error' as const };
-  if (diasRestantes <= 30) return { label: `Vence em ${diasRestantes}d`, color: 'warning' as const };
+  if (diasRestantes <= 45) return { label: `Vence em ${diasRestantes}d`, color: 'warning' as const };
   return { label: 'Válida', color: 'success' as const };
 };
 
@@ -109,9 +111,14 @@ const Afericoes: React.FC = () => {
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Aferições / Calibrações
         </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-          Nova Aferição
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarAfericoes(afericoes)}>
+            Exportar Excel
+          </Button>
+          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
+            Nova Aferição
+          </Button>
+        </Box>
       </Box>
 
       {carregando ? (
@@ -128,13 +135,14 @@ const Afericoes: React.FC = () => {
                 <TableCell sx={{ color: 'white' }}>Validade</TableCell>
                 <TableCell sx={{ color: 'white' }}>Órgão Responsável</TableCell>
                 <TableCell sx={{ color: 'white' }}>Certificado</TableCell>
+                <TableCell sx={{ color: 'white' }}>Contrato</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {afericoes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#666' }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#666' }}>
                     Nenhuma aferição cadastrada ainda
                   </TableCell>
                 </TableRow>
@@ -148,6 +156,7 @@ const Afericoes: React.FC = () => {
                       <TableCell>{new Date(a.data_validade).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{a.orgao_responsavel}</TableCell>
                       <TableCell>{a.numero_certificado || '-'}</TableCell>
+                      <TableCell>{a.equipamento?.contrato?.numero_contrato || '-'}</TableCell>
                       <TableCell>
                         <Chip label={status.label} color={status.color} size="small" />
                       </TableCell>

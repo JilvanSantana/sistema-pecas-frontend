@@ -12,6 +12,7 @@ import Usuarios from './pages/Usuarios';
 import OrdensServico from './pages/OrdensServico';
 import AguardandoRemessa from './pages/AguardandoRemessa';
 import Afericoes from './pages/Afericoes';
+import Contratos from './pages/Contratos';
 
 const RotaProtegida: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -37,6 +38,7 @@ const App: React.FC = () => {
           <Route path="/ordens-servico" element={<RotaProtegida><OrdensServico /></RotaProtegida>} />
           <Route path="/aguardando-remessa" element={<RotaProtegida><AguardandoRemessa /></RotaProtegida>} />
           <Route path="/afericoes" element={<RotaProtegida><Afericoes /></RotaProtegida>} />
+          <Route path="/contratos" element={<RotaProtegida><Contratos /></RotaProtegida>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
