@@ -23,8 +23,10 @@ import {
   Warning,
   VerifiedUser,
   Description,
+  CorporateFare,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const LARGURA_MENU = 240;
 
@@ -45,6 +47,9 @@ const itensMenu = [
 const MenuLateral: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { usuario } = useAuth();
+
+  const ehSuperAdmin = usuario?.papel === 'super_admin';
 
   return (
     <Drawer
@@ -79,6 +84,31 @@ const MenuLateral: React.FC = () => {
         </Box>
       </Toolbar>
       <Divider sx={{ borderColor: '#3949ab' }} />
+
+      {ehSuperAdmin && (
+        <>
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => navigate('/empresas')}
+                selected={location.pathname === '/empresas'}
+                sx={{
+                  '&.Mui-selected': { backgroundColor: '#b71c1c' },
+                  '&:hover': { backgroundColor: '#c62828' },
+                  backgroundColor: location.pathname === '/empresas' ? '#b71c1c' : '#d32f2f',
+                }}
+              >
+                <ListItemIcon sx={{ color: '#ffcdd2' }}>
+                  <CorporateFare />
+                </ListItemIcon>
+                <ListItemText primary="Empresas" sx={{ color: 'white' }} />
+              </ListItemButton>
+            </ListItem>
+          </List>
+          <Divider sx={{ borderColor: '#3949ab' }} />
+        </>
+      )}
+
       <List>
         {itensMenu.map((item) => (
           <ListItem key={item.texto} disablePadding>

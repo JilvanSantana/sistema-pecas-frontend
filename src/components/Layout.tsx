@@ -9,6 +9,14 @@ const LARGURA_MENU = 240;
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { usuario, logout } = useAuth();
 
+  const labelPapel = () => {
+    if (usuario?.papel === 'super_admin') return 'Super Admin';
+    if (usuario?.papel === 'admin_global') return 'Sede';
+    if (usuario?.papel === 'admin_base') return 'Base';
+    if (usuario?.papel === 'tecnico') return 'Técnico';
+    return 'Operador';
+  };
+
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar
@@ -17,7 +25,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Nexo — {usuario?.papel === 'admin_global' ? 'Sede' : 'Base'}
+            Nexo — {labelPapel()}
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             {usuario?.nome}
