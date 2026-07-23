@@ -23,6 +23,7 @@ import { Add, Download } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { exportarAfericoes } from '../services/exportar';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Equipamento {
   id: string;
@@ -107,7 +108,7 @@ const Afericoes: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Aferições / Calibrações
         </Typography>
@@ -126,17 +127,17 @@ const Afericoes: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Equipamento</TableCell>
-                <TableCell sx={{ color: 'white' }}>Data Aferição</TableCell>
-                <TableCell sx={{ color: 'white' }}>Validade</TableCell>
-                <TableCell sx={{ color: 'white' }}>Órgão Responsável</TableCell>
-                <TableCell sx={{ color: 'white' }}>Certificado</TableCell>
-                <TableCell sx={{ color: 'white' }}>Contrato</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Equipamento</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Data Aferição</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Validade</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Órgão Responsável</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Certificado</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Contrato</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

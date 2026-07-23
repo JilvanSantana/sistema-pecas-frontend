@@ -38,7 +38,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           ml: `${LARGURA_MENU}px`,
           mt: '64px',
           backgroundColor: '#f0f2f5',
-          minHeight: '100vh',
+          height: 'calc(100vh - 64px)',
+          overflow: 'auto',
         }}
       >
         {children}

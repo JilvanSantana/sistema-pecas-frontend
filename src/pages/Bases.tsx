@@ -23,6 +23,7 @@ import { Add } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Base {
   id: string;
@@ -79,7 +80,7 @@ const Bases: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Bases / Filiais
         </Typography>
@@ -93,16 +94,16 @@ const Bases: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Nome</TableCell>
-                <TableCell sx={{ color: 'white' }}>Tipo</TableCell>
-                <TableCell sx={{ color: 'white' }}>Estado</TableCell>
-                <TableCell sx={{ color: 'white' }}>Cidade</TableCell>
-                <TableCell sx={{ color: 'white' }}>Endereço</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Nome</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Tipo</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Estado</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Cidade</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Endereço</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

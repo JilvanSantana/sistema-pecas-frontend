@@ -22,6 +22,7 @@ import {
 import { Add } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Fornecedor {
   id: string;
@@ -74,7 +75,7 @@ const Fornecedores: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Fornecedores / Fabricantes
         </Typography>
@@ -88,17 +89,17 @@ const Fornecedores: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Nome</TableCell>
-                <TableCell sx={{ color: 'white' }}>Tipo</TableCell>
-                <TableCell sx={{ color: 'white' }}>CNPJ</TableCell>
-                <TableCell sx={{ color: 'white' }}>Contato</TableCell>
-                <TableCell sx={{ color: 'white' }}>Email</TableCell>
-                <TableCell sx={{ color: 'white' }}>Telefone</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Nome</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Tipo</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>CNPJ</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Contato</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Email</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Telefone</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

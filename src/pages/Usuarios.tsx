@@ -23,6 +23,7 @@ import { Add } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Usuario {
   id: string;
@@ -30,31 +31,22 @@ interface Usuario {
   email: string;
   papel: string;
   ativo: boolean;
-  base: { nome: string; estado: string } | null;
+  base?: { nome: string; estado: string };
 }
 
 const papelLabels: Record<string, string> = {
-  admin_global: 'Admin Global',
-  admin_base: 'Admin Base',
+  admin_global: 'Administrador',
+  admin_base: 'Admin da Base',
   operador: 'Operador',
-  auditor: 'Auditor',
   tecnico: 'Técnico',
-};
-
-const papelCores: Record<string, 'error' | 'warning' | 'info' | 'default' | 'success'> = {
-  admin_global: 'error',
-  admin_base: 'warning',
-  operador: 'info',
-  auditor: 'default',
-  tecnico: 'success',
 };
 
 const Usuarios: React.FC = () => {
   const { usuario } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [bases, setBases] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
-  const [bases, setBases] = useState<any[]>([]);
   const [form, setForm] = useState({
     nome: '',
     email: '',
@@ -66,7 +58,7 @@ const Usuarios: React.FC = () => {
   const carregarDados = async () => {
     try {
       const [resUsuarios, resBases] = await Promise.all([
-        api.get(`/empresa/${usuario?.empresa_id}/usuarios`),
+        api.get('/empresa/usuarios'),
         api.get(`/empresa/${usuario?.empresa_id}/bases`),
       ]);
       setUsuarios(resUsuarios.data);
@@ -82,9 +74,8 @@ const Usuarios: React.FC = () => {
 
   const handleSalvar = async () => {
     try {
-      await api.post('/auth/registrar', {
+      await api.post('/empresa/usuarios', {
         ...form,
-        empresa_id: usuario?.empresa_id,
         base_id: form.base_id || undefined,
       });
       setAbrirDialog(false);
@@ -97,7 +88,7 @@ const Usuarios: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Usuários
         </Typography>
@@ -111,47 +102,31 @@ const Usuarios: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Nome</TableCell>
-                <TableCell sx={{ color: 'white' }}>Email</TableCell>
-                <TableCell sx={{ color: 'white' }}>Papel</TableCell>
-                <TableCell sx={{ color: 'white' }}>Base</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Nome</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Email</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Papel</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Base</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {usuarios.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: '#666' }}>
-                    Nenhum usuário encontrado
+              {usuarios.map((u) => (
+                <TableRow key={u.id} hover>
+                  <TableCell>{u.nome}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell>
+                    <Chip label={papelLabels[u.papel] || u.papel} color="primary" size="small" variant="outlined" />
+                  </TableCell>
+                  <TableCell>{u.base ? `${u.base.nome} - ${u.base.estado}` : 'Todas'}</TableCell>
+                  <TableCell>
+                    <Chip label={u.ativo ? 'Ativo' : 'Inativo'} color={u.ativo ? 'success' : 'error'} size="small" />
                   </TableCell>
                 </TableRow>
-              ) : (
-                usuarios.map((u) => (
-                  <TableRow key={u.id} hover>
-                    <TableCell>{u.nome}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={papelLabels[u.papel] || u.papel}
-                        color={papelCores[u.papel] || 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{u.base ? `${u.base.nome} - ${u.base.estado}` : 'Todas as bases'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={u.ativo ? 'Ativo' : 'Inativo'}
-                        color={u.ativo ? 'success' : 'error'}
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -161,15 +136,16 @@ const Usuarios: React.FC = () => {
         <DialogTitle>Novo Usuário</DialogTitle>
         <DialogContent>
           <TextField fullWidth label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} sx={{ mt: 2, mb: 2 }} />
-          <TextField fullWidth label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} sx={{ mb: 2 }} />
           <TextField fullWidth label="Senha" type="password" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} sx={{ mb: 2 }} />
           <TextField select fullWidth label="Papel" value={form.papel} onChange={(e) => setForm({ ...form, papel: e.target.value })} sx={{ mb: 2 }}>
-            {Object.entries(papelLabels).map(([value, label]) => (
-              <MenuItem key={value} value={value}>{label}</MenuItem>
-            ))}
+            <MenuItem value="admin_global">Administrador</MenuItem>
+            <MenuItem value="admin_base">Admin da Base</MenuItem>
+            <MenuItem value="operador">Operador</MenuItem>
+            <MenuItem value="tecnico">Técnico</MenuItem>
           </TextField>
           <TextField select fullWidth label="Base (opcional para admin global)" value={form.base_id} onChange={(e) => setForm({ ...form, base_id: e.target.value })}>
-            <MenuItem value="">Todas as bases</MenuItem>
+            <MenuItem value="">Nenhuma (acesso geral)</MenuItem>
             {bases.map((b) => (
               <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
             ))}

@@ -22,6 +22,7 @@ import { Add, Download } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { exportarContratos } from '../services/exportar';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Contrato {
   id: string;
@@ -32,6 +33,19 @@ interface Contrato {
   data_fim: string | null;
   status: string;
 }
+
+const calcularStatusPrazo = (dataFim: string | null, status: string) => {
+  if (status !== 'ativo') return { label: 'Encerrado', color: 'default' as const };
+  if (!dataFim) return { label: 'Ativo (sem prazo)', color: 'success' as const };
+
+  const hoje = new Date();
+  const fim = new Date(dataFim);
+  const diasRestantes = Math.ceil((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diasRestantes < 0) return { label: 'Vencido', color: 'error' as const };
+  if (diasRestantes <= 45) return { label: `Encerra em ${diasRestantes}d`, color: 'warning' as const };
+  return { label: 'Ativo', color: 'success' as const };
+};
 
 const Contratos: React.FC = () => {
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -75,7 +89,7 @@ const Contratos: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Contratos
         </Typography>
@@ -94,16 +108,16 @@ const Contratos: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Número</TableCell>
-                <TableCell sx={{ color: 'white' }}>Órgão Contratante</TableCell>
-                <TableCell sx={{ color: 'white' }}>SLA (horas)</TableCell>
-                <TableCell sx={{ color: 'white' }}>Início</TableCell>
-                <TableCell sx={{ color: 'white' }}>Fim</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Número</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Órgão Contratante</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>SLA (horas)</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Início</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Fim</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -114,22 +128,21 @@ const Contratos: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                contratos.map((c) => (
-                  <TableRow key={c.id} hover>
-                    <TableCell>{c.numero_contrato}</TableCell>
-                    <TableCell>{c.orgao_contratante}</TableCell>
-                    <TableCell>{c.sla_horas_atendimento}h</TableCell>
-                    <TableCell>{new Date(c.data_inicio).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{c.data_fim ? new Date(c.data_fim).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={c.status === 'ativo' ? 'Ativo' : 'Encerrado'}
-                        color={c.status === 'ativo' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
+                contratos.map((c) => {
+                  const statusPrazo = calcularStatusPrazo(c.data_fim, c.status);
+                  return (
+                    <TableRow key={c.id} hover>
+                      <TableCell>{c.numero_contrato}</TableCell>
+                      <TableCell>{c.orgao_contratante}</TableCell>
+                      <TableCell>{c.sla_horas_atendimento}h</TableCell>
+                      <TableCell>{new Date(c.data_inicio).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{c.data_fim ? new Date(c.data_fim).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                      <TableCell>
+                        <Chip label={statusPrazo.label} color={statusPrazo.color} size="small" />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

@@ -15,6 +15,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   TextField,
   MenuItem,
@@ -23,14 +24,16 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
+  Switch,
   Typography as Typo,
 } from '@mui/material';
-import { Add, Download, QrCode } from '@mui/icons-material';
+import { Add, Download, QrCode, Archive, Unarchive } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { exportarEquipamentos } from '../services/exportar';
 import QrCodeModal from '../components/QrCodeModal';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Equipamento {
   id: string;
@@ -42,6 +45,7 @@ interface Equipamento {
   quantidade_faixas: number | null;
   status_operacional: string;
   qr_code: string;
+  arquivado: boolean;
   base: { nome: string; estado: string };
   contrato: { numero_contrato: string; orgao_contratante: string } | null;
 }
@@ -102,6 +106,9 @@ const Equipamentos: React.FC = () => {
   const [bases, setBases] = useState<any[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [qrSelecionado, setQrSelecionado] = useState<Equipamento | null>(null);
+  const [equipamentoParaArquivar, setEquipamentoParaArquivar] = useState<Equipamento | null>(null);
+  const [arquivando, setArquivando] = useState(false);
+  const [mostrarArquivados, setMostrarArquivados] = useState(false);
   const [form, setForm] = useState({
     tipo: '',
     modelo: '',
@@ -117,9 +124,9 @@ const Equipamentos: React.FC = () => {
   const [tiposSelecionados, setTiposSelecionados] = useState<string[]>(TIPOS_DISPONIVEIS.map((t) => t.valor));
   const [statusSelecionados, setStatusSelecionados] = useState<string[]>(STATUS_DISPONIVEIS.map((s) => s.valor));
 
-  const carregarDados = async () => {
+  const carregarDados = async (incluirArquivados = mostrarArquivados) => {
     try {
-      const res = await api.get('/equipamento');
+      const res = await api.get(`/equipamento?incluir_arquivados=${incluirArquivados}`);
       setEquipamentos(res.data);
       const resBases = await api.get(`/empresa/${usuario?.empresa_id}/bases`);
       setBases(resBases.data);
@@ -145,6 +152,12 @@ const Equipamentos: React.FC = () => {
 
   useEffect(() => { carregarDados(); }, []);
 
+  const handleToggleArquivados = async (checked: boolean) => {
+    setMostrarArquivados(checked);
+    setCarregando(true);
+    await carregarDados(checked);
+  };
+
   const handleSalvar = async () => {
     try {
       await api.post('/equipamento', {
@@ -154,6 +167,29 @@ const Equipamentos: React.FC = () => {
       });
       setAbrirDialog(false);
       setForm({ tipo: '', modelo: '', fabricante: '', numero_serie: '', localizacao_instalacao: '', quantidade_faixas: '', base_responsavel_id: '', contrato_id: '' });
+      carregarDados();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleArquivar = async () => {
+    if (!equipamentoParaArquivar) return;
+    try {
+      setArquivando(true);
+      await api.patch(`/equipamento/${equipamentoParaArquivar.id}/arquivar`);
+      setEquipamentoParaArquivar(null);
+      carregarDados();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setArquivando(false);
+    }
+  };
+
+  const handleDesarquivar = async (id: string) => {
+    try {
+      await api.patch(`/equipamento/${id}/desarquivar`);
       carregarDados();
     } catch (error) {
       console.error(error);
@@ -182,10 +218,16 @@ const Equipamentos: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Equipamentos
-        </Typography>
+      <Box sx={cabecalhoPaginaFixo}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+            Equipamentos
+          </Typography>
+          <FormControlLabel
+            control={<Switch checked={mostrarArquivados} onChange={(e) => handleToggleArquivados(e.target.checked)} size="small" />}
+            label={<Typography variant="body2" color="text.secondary">Ver arquivados</Typography>}
+          />
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="outlined" startIcon={<Download />} onClick={() => setAbrirFiltroExport(true)}>
             Exportar Excel
@@ -201,29 +243,32 @@ const Equipamentos: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Tipo</TableCell>
-                <TableCell sx={{ color: 'white' }}>Modelo</TableCell>
-                <TableCell sx={{ color: 'white' }}>Fabricante</TableCell>
-                <TableCell sx={{ color: 'white' }}>Nº Série</TableCell>
-                <TableCell sx={{ color: 'white' }}>Localização</TableCell>
-                <TableCell sx={{ color: 'white' }}>Faixas</TableCell>
-                <TableCell sx={{ color: 'white' }}>Base</TableCell>
-                <TableCell sx={{ color: 'white' }}>Contrato</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
-                <TableCell sx={{ color: 'white' }}>Aferição</TableCell>
-                <TableCell sx={{ color: 'white' }}>Ações</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Tipo</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Modelo</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Fabricante</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Nº Série</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Localização</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Faixas</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Base</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Contrato</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Aferição</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {equipamentos.map((eq) => {
                 const statusAfericao = calcularStatusAfericao(afericoesPorEquipamento[eq.id]);
                 return (
-                  <TableRow key={eq.id} hover>
-                    <TableCell sx={{ textTransform: 'capitalize' }}>{eq.tipo}</TableCell>
+                  <TableRow key={eq.id} hover sx={eq.arquivado ? { opacity: 0.55, backgroundColor: '#fafafa' } : {}}>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>
+                      {eq.tipo}
+                      {eq.arquivado && <Chip label="Arquivado" size="small" sx={{ ml: 1 }} />}
+                    </TableCell>
                     <TableCell>{eq.modelo}</TableCell>
                     <TableCell>{eq.fabricante || '-'}</TableCell>
                     <TableCell>{eq.numero_serie}</TableCell>
@@ -242,11 +287,26 @@ const Equipamentos: React.FC = () => {
                       <Chip label={statusAfericao.label} color={statusAfericao.color} size="small" />
                     </TableCell>
                     <TableCell>
-                      <Tooltip title="Ver QR Code">
-                        <IconButton color="primary" onClick={() => setQrSelecionado(eq)}>
-                          <QrCode />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Ver QR Code">
+                          <IconButton color="primary" size="small" onClick={() => setQrSelecionado(eq)}>
+                            <QrCode />
+                          </IconButton>
+                        </Tooltip>
+                        {eq.arquivado ? (
+                          <Tooltip title="Restaurar equipamento">
+                            <IconButton color="success" size="small" onClick={() => handleDesarquivar(eq.id)}>
+                              <Unarchive />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title="Arquivar equipamento">
+                            <IconButton color="error" size="small" onClick={() => setEquipamentoParaArquivar(eq)}>
+                              <Archive />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 );
@@ -265,6 +325,24 @@ const Equipamentos: React.FC = () => {
           categoria={qrSelecionado.tipo}
         />
       )}
+
+      <Dialog open={!!equipamentoParaArquivar} onClose={() => setEquipamentoParaArquivar(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Arquivar equipamento?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            O equipamento <strong>{equipamentoParaArquivar?.tipo} — {equipamentoParaArquivar?.modelo} (Nº {equipamentoParaArquivar?.numero_serie})</strong> será removido da lista.
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2, fontSize: 14, color: '#666' }}>
+            O histórico de aferições, ordens de serviço e movimentações de peças será preservado. Você pode restaurá-lo depois ativando "Mostrar arquivados".
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEquipamentoParaArquivar(null)}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={handleArquivar} disabled={arquivando}>
+            {arquivando ? <CircularProgress size={22} color="inherit" /> : 'Arquivar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Novo Equipamento</DialogTitle>

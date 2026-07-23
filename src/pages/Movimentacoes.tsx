@@ -33,6 +33,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { exportarMovimentacoes } from '../services/exportar';
 import AlertaChip from '../components/AlertaChip';
 import { calcularTempoAberto } from '../utils/prazos';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Movimentacao {
   id: string;
@@ -71,7 +72,6 @@ const motivoLabels: Record<string, string> = {
   outro: 'Outro',
 };
 
-// Prazos de referência (em dias) para peças aguardando envio/retorno
 const LIMITE_ATENCAO_DIAS = 7;
 const LIMITE_CRITICO_DIAS = 15;
 
@@ -151,7 +151,7 @@ const Movimentacoes: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Movimentações
         </Typography>
@@ -170,19 +170,19 @@ const Movimentacoes: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>Peça</TableCell>
-                <TableCell sx={{ color: 'white' }}>Motivo</TableCell>
-                <TableCell sx={{ color: 'white' }}>Origem → Destino</TableCell>
-                <TableCell sx={{ color: 'white' }}>Rastreio</TableCell>
-                <TableCell sx={{ color: 'white' }}>Parada</TableCell>
-                <TableCell sx={{ color: 'white' }}>Data</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
-                <TableCell sx={{ color: 'white' }}>Tempo Aguardando</TableCell>
-                <TableCell sx={{ color: 'white' }}>Ações</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>Peça</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Motivo</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Origem → Destino</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Rastreio</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Parada</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Data</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Tempo Aguardando</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

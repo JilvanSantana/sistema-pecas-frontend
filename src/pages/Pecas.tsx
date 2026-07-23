@@ -34,6 +34,7 @@ import QrCodeModal from '../components/QrCodeModal';
 import { exportarPecas } from '../services/exportar';
 import AlertaChip from '../components/AlertaChip';
 import { calcularTempoAberto } from '../utils/prazos';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Peca {
   id: string;
@@ -172,7 +173,7 @@ const Pecas: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           Peças
         </Typography>
@@ -191,17 +192,17 @@ const Pecas: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1a237e' }}>
-                <TableCell sx={{ color: 'white' }}>QR Code</TableCell>
-                <TableCell sx={{ color: 'white' }}>Descrição</TableCell>
-                <TableCell sx={{ color: 'white' }}>Categoria</TableCell>
-                <TableCell sx={{ color: 'white' }}>Localização</TableCell>
-                <TableCell sx={{ color: 'white' }}>Status</TableCell>
-                <TableCell sx={{ color: 'white' }}>Tempo Aguardando</TableCell>
-                <TableCell sx={{ color: 'white' }}>Ações</TableCell>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>QR Code</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Descrição</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Categoria</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Localização</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Tempo Aguardando</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
