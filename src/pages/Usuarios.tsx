@@ -18,8 +18,10 @@ import {
   DialogActions,
   TextField,
   MenuItem,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, Delete } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,6 +49,8 @@ const Usuarios: React.FC = () => {
   const [bases, setBases] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
+  const [abrirConfirmDelete, setAbrirConfirmDelete] = useState(false);
+  const [usuarioParaDeletar, setUsuarioParaDeletar] = useState<Usuario | null>(null);
   const [form, setForm] = useState({
     nome: '',
     email: '',
@@ -86,12 +90,27 @@ const Usuarios: React.FC = () => {
     }
   };
 
+  const handleDeletar = async () => {
+    if (!usuarioParaDeletar) return;
+    try {
+      await api.delete(`/empresa/usuarios/${usuarioParaDeletar.id}`);
+      setAbrirConfirmDelete(false);
+      setUsuarioParaDeletar(null);
+      carregarDados();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const confirmarDelete = (u: Usuario) => {
+    setUsuarioParaDeletar(u);
+    setAbrirConfirmDelete(true);
+  };
+
   return (
     <Layout>
-      <Box sx={cabecalhoPaginaFixo}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Usuários
-        </Typography>
+      <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Usuários</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
           Novo Usuário
         </Button>
@@ -111,6 +130,7 @@ const Usuarios: React.FC = () => {
                 <TableCell sx={celulaCabecalhoFixo}>Papel</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Base</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -118,12 +138,26 @@ const Usuarios: React.FC = () => {
                 <TableRow key={u.id} hover>
                   <TableCell>{u.nome}</TableCell>
                   <TableCell>{u.email}</TableCell>
+                  <TableCell>{papelLabels[u.papel] || u.papel}</TableCell>
+                  <TableCell>{u.base ? `${u.base.nome} - ${u.base.estado}` : '—'}</TableCell>
                   <TableCell>
-                    <Chip label={papelLabels[u.papel] || u.papel} color="primary" size="small" variant="outlined" />
+                    <Chip
+                      label={u.ativo ? 'Ativo' : 'Inativo'}
+                      color={u.ativo ? 'success' : 'default'}
+                      size="small"
+                    />
                   </TableCell>
-                  <TableCell>{u.base ? `${u.base.nome} - ${u.base.estado}` : 'Todas'}</TableCell>
                   <TableCell>
-                    <Chip label={u.ativo ? 'Ativo' : 'Inativo'} color={u.ativo ? 'success' : 'error'} size="small" />
+                    <Tooltip title="Excluir usuário">
+                      <IconButton
+                        color="error"
+                        size="small"
+                        onClick={() => confirmarDelete(u)}
+                        disabled={u.id === usuario?.id}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -132,6 +166,7 @@ const Usuarios: React.FC = () => {
         </TableContainer>
       )}
 
+      {/* Dialog novo usuário */}
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Novo Usuário</DialogTitle>
         <DialogContent>
@@ -144,8 +179,8 @@ const Usuarios: React.FC = () => {
             <MenuItem value="operador">Operador</MenuItem>
             <MenuItem value="tecnico">Técnico</MenuItem>
           </TextField>
-          <TextField select fullWidth label="Base (opcional para admin global)" value={form.base_id} onChange={(e) => setForm({ ...form, base_id: e.target.value })}>
-            <MenuItem value="">Nenhuma (acesso geral)</MenuItem>
+          <TextField select fullWidth label="Base" value={form.base_id} onChange={(e) => setForm({ ...form, base_id: e.target.value })}>
+            <MenuItem value="">Nenhuma</MenuItem>
             {bases.map((b) => (
               <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
             ))}
@@ -154,6 +189,21 @@ const Usuarios: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setAbrirDialog(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSalvar}>Salvar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog confirmar exclusão */}
+      <Dialog open={abrirConfirmDelete} onClose={() => setAbrirConfirmDelete(false)}>
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tem certeza que deseja excluir o usuário <strong>{usuarioParaDeletar?.nome}</strong>?
+            Esta ação não pode ser desfeita.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAbrirConfirmDelete(false)}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={handleDeletar}>Excluir</Button>
         </DialogActions>
       </Dialog>
     </Layout>
