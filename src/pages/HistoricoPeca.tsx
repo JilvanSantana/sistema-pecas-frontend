@@ -180,12 +180,12 @@ const HistoricoPeca: React.FC = () => {
                     {motivoLabels[mov.motivo] || mov.motivo}
                   </Typography>
                   {mov.equipamento && (
-                    <Typography variant="caption" color="text.secondary" display="block">
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                       📡 {mov.equipamento}
                     </Typography>
                   )}
                   {mov.descricao && (
-                    <Typography variant="caption" color="text.secondary" display="block">
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                       {mov.descricao}
                     </Typography>
                   )}
