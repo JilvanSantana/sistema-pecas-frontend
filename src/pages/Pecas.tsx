@@ -287,7 +287,7 @@ const Pecas: React.FC = () => {
             ))}
           </TextField>
           <TextField fullWidth label="Observação" value={formFabricante.observacao} onChange={(e) => setFormFabricante({ ...formFabricante, observacao: e.target.value })} sx={{ mb: 2 }} multiline rows={2} />
-          <TextField fullWidth label="Previsão de Retorno" type="date" value={formFabricante.previsao_retorno} onChange={(e) => setFormFabricante({ ...formFabricante, previsao_retorno: e.target.value })} InputLabelProps={{ shrink: true }} />
+          <TextField fullWidth label="Previsão de Retorno" type="date" value={formFabricante.previsao_retorno} onChange={(e) => setFormFabricante({ ...formFabricante, previsao_retorno: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirFabricante(false)}>Cancelar</Button>
