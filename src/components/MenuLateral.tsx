@@ -23,33 +23,39 @@ import {
   Warning,
   VerifiedUser,
   Description,
-  CorporateFare,
+  Apartment,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const LARGURA_MENU = 240;
 
-const itensMenu = [
-  { texto: 'Dashboard', icone: <Dashboard />, rota: '/dashboard' },
-  { texto: 'Ordens de Serviço', icone: <Assignment />, rota: '/ordens-servico' },
-  { texto: 'Equipamentos', icone: <Build />, rota: '/equipamentos' },
-  { texto: 'Aferições', icone: <VerifiedUser />, rota: '/afericoes' },
-  { texto: 'Contratos', icone: <Description />, rota: '/contratos' },
-  { texto: 'Peças', icone: <Inventory />, rota: '/pecas' },
-  { texto: 'Movimentações', icone: <LocalShipping />, rota: '/movimentacoes' },
-  { texto: 'Aguardando Remessa', icone: <Warning sx={{ color: '#ff9800' }} />, rota: '/aguardando-remessa' },
-  { texto: 'Bases', icone: <Business />, rota: '/bases' },
-  { texto: 'Fornecedores', icone: <Factory />, rota: '/fornecedores' },
-  { texto: 'Usuários', icone: <People />, rota: '/usuarios' },
-];
+const Usuarios: React.FC = () => null;
 
 const MenuLateral: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { usuario } = useAuth();
 
-  const ehSuperAdmin = usuario?.papel === 'super_admin';
+  const papel = usuario?.papel || '';
+  const isAdmin = papel === 'admin_global';
+  const isAdminBase = papel === 'admin_base';
+  const isOperador = papel === 'operador';
+
+  const itensMenu = [
+    { texto: 'Dashboard', icone: <Dashboard />, rota: '/dashboard', papeis: ['admin_global', 'admin_base', 'operador'] },
+    { texto: 'Ordens de Serviço', icone: <Assignment />, rota: '/ordens-servico', papeis: ['admin_global', 'admin_base'] },
+    { texto: 'Equipamentos', icone: <Build />, rota: '/equipamentos', papeis: ['admin_global', 'admin_base', 'operador'] },
+    { texto: 'Aferições', icone: <VerifiedUser />, rota: '/afericoes', papeis: ['admin_global', 'admin_base'] },
+    { texto: 'Contratos', icone: <Description />, rota: '/contratos', papeis: ['admin_global', 'admin_base', 'operador'] },
+    { texto: 'Peças', icone: <Inventory />, rota: '/pecas', papeis: ['admin_global', 'admin_base', 'operador'] },
+    { texto: 'Movimentações', icone: <LocalShipping />, rota: '/movimentacoes', papeis: ['admin_global', 'admin_base', 'operador'] },
+    { texto: 'Aguardando Remessa', icone: <Warning sx={{ color: '#ff9800' }} />, rota: '/aguardando-remessa', papeis: ['admin_global', 'admin_base', 'operador'] },
+    { texto: 'Bases', icone: <Business />, rota: '/bases', papeis: ['admin_global'] },
+    { texto: 'Fornecedores', icone: <Factory />, rota: '/fornecedores', papeis: ['admin_global'] },
+    { texto: 'Usuários', icone: <People />, rota: '/usuarios', papeis: ['admin_global', 'admin_base'] },
+    { texto: 'Empresas', icone: <Apartment />, rota: '/empresas', papeis: ['admin_global'] },
+  ].filter(item => item.papeis.includes(papel));
 
   return (
     <Drawer
@@ -66,49 +72,16 @@ const MenuLateral: React.FC = () => {
       }}
     >
       <Toolbar>
-        <Box sx={{ py: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            component="img"
-            src={`${process.env.PUBLIC_URL}/logo-nexo-transparente.png?v=2`}
-            alt="Nexo"
-            sx={{ width: 34, height: 34 }}
-          />
-          <Box>
-            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', lineHeight: 1.1 }}>
-              Nexo
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#90caf9' }}>
-              by ROTAPRO
-            </Typography>
-          </Box>
+        <Box sx={{ py: 1 }}>
+          <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+            Nexo
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#90caf9' }}>
+            {isAdmin ? 'Administrador' : isAdminBase ? 'Admin da Base' : 'Operador'}
+          </Typography>
         </Box>
       </Toolbar>
       <Divider sx={{ borderColor: '#3949ab' }} />
-
-      {ehSuperAdmin && (
-        <>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => navigate('/empresas')}
-                selected={location.pathname === '/empresas'}
-                sx={{
-                  '&.Mui-selected': { backgroundColor: '#b71c1c' },
-                  '&:hover': { backgroundColor: '#c62828' },
-                  backgroundColor: location.pathname === '/empresas' ? '#b71c1c' : '#d32f2f',
-                }}
-              >
-                <ListItemIcon sx={{ color: '#ffcdd2' }}>
-                  <CorporateFare />
-                </ListItemIcon>
-                <ListItemText primary="Empresas" sx={{ color: 'white' }} />
-              </ListItemButton>
-            </ListItem>
-          </List>
-          <Divider sx={{ borderColor: '#3949ab' }} />
-        </>
-      )}
-
       <List>
         {itensMenu.map((item) => (
           <ListItem key={item.texto} disablePadding>
@@ -116,12 +89,8 @@ const MenuLateral: React.FC = () => {
               onClick={() => navigate(item.rota)}
               selected={location.pathname === item.rota}
               sx={{
-                '&.Mui-selected': {
-                  backgroundColor: '#3949ab',
-                },
-                '&:hover': {
-                  backgroundColor: '#283593',
-                },
+                '&.Mui-selected': { backgroundColor: '#3949ab' },
+                '&:hover': { backgroundColor: '#283593' },
               }}
             >
               <ListItemIcon sx={{ color: '#90caf9' }}>
