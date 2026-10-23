@@ -37,7 +37,7 @@ const MenuLateral: React.FC = () => {
   const location = useLocation();
   const { usuario } = useAuth();
 
-  const papel = usuario?.papel || '';
+  const papel = usuario?.papel || JSON.parse(localStorage.getItem('usuario') || '{}')?.papel || '';
   const isAdmin = papel === 'admin_global';
   const isAdminBase = papel === 'admin_base';
   const isOperador = papel === 'operador';
