@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
@@ -15,6 +15,8 @@ import Afericoes from './pages/Afericoes';
 import Contratos from './pages/Contratos';
 import Empresas from './pages/Empresas';
 import HistoricoPeca from './pages/HistoricoPeca';
+import EstoquePorBase from './pages/EstoquePorBase';
+import PecasManutencao from './pages/PecasManutencao';
 
 const RotaProtegida: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -43,6 +45,8 @@ const App: React.FC = () => {
           <Route path="/afericoes" element={<RotaProtegida><Afericoes /></RotaProtegida>} />
           <Route path="/contratos" element={<RotaProtegida><Contratos /></RotaProtegida>} />
           <Route path="/empresas" element={<RotaProtegida><Empresas /></RotaProtegida>} />
+          <Route path="/estoque-base" element={<RotaProtegida><EstoquePorBase /></RotaProtegida>} />
+          <Route path="/manutencao" element={<RotaProtegida><PecasManutencao /></RotaProtegida>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
