@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -26,7 +27,7 @@ import {
   FormLabel,
   FormControl,
 } from '@mui/material';
-import { Add, QrCode, Factory, AssignmentReturn, Download } from '@mui/icons-material';
+import { Add, QrCode, Factory, AssignmentReturn, Download, History } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -75,12 +76,12 @@ const statusLabels: Record<string, string> = {
 };
 
 const STATUS_AGUARDANDO = ['em_transito', 'defeituosa_aguardando_analise', 'em_reparo_fabricante'];
-
 const LIMITE_ATENCAO_DIAS = 7;
 const LIMITE_CRITICO_DIAS = 15;
 
 const Pecas: React.FC = () => {
   const { usuario } = useAuth();
+  const navigate = useNavigate();
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [ultimaMovPorPeca, setUltimaMovPorPeca] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
@@ -173,10 +174,8 @@ const Pecas: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={cabecalhoPaginaFixo}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Peças
-        </Typography>
+      <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Peças</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecas)}>
             Exportar Excel
@@ -241,6 +240,11 @@ const Pecas: React.FC = () => {
                           <QrCode />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="Histórico e Vida Útil">
+                        <IconButton color="info" onClick={() => navigate(`/pecas/${peca.id}/historico`)}>
+                          <History />
+                        </IconButton>
+                      </Tooltip>
                       {peca.status_atual === 'defeituosa_aguardando_analise' && (
                         <Tooltip title="Enviar ao Fabricante">
                           <IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}>
@@ -277,42 +281,31 @@ const Pecas: React.FC = () => {
       <Dialog open={abrirFabricante} onClose={() => setAbrirFabricante(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Enviar ao Fabricante</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
-            Peça: <strong>{pecaSelecionada?.descricao}</strong>
-          </Typography>
-          <TextField select fullWidth label="Fabricante / Fornecedor" value={formFabricante.fornecedor_id} onChange={(e) => setFormFabricante({ ...formFabricante, fornecedor_id: e.target.value })} sx={{ mb: 2 }}>
-            {fornecedores.length === 0 ? (
-              <MenuItem disabled>Nenhum fornecedor cadastrado</MenuItem>
-            ) : (
-              fornecedores.map((f) => (
-                <MenuItem key={f.id} value={f.id}>{f.nome} ({f.tipo})</MenuItem>
-              ))
-            )}
+          <TextField select fullWidth label="Fornecedor" value={formFabricante.fornecedor_id} onChange={(e) => setFormFabricante({ ...formFabricante, fornecedor_id: e.target.value })} sx={{ mt: 2, mb: 2 }}>
+            {fornecedores.map((f) => (
+              <MenuItem key={f.id} value={f.id}>{f.nome}</MenuItem>
+            ))}
           </TextField>
-          <TextField fullWidth label="Observação" value={formFabricante.observacao} onChange={(e) => setFormFabricante({ ...formFabricante, observacao: e.target.value })} multiline rows={3} sx={{ mb: 2 }} />
-          <TextField fullWidth label="Previsão de Retorno (opcional)" type="date" value={formFabricante.previsao_retorno} onChange={(e) => setFormFabricante({ ...formFabricante, previsao_retorno: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField fullWidth label="Observação" value={formFabricante.observacao} onChange={(e) => setFormFabricante({ ...formFabricante, observacao: e.target.value })} sx={{ mb: 2 }} multiline rows={2} />
+          <TextField fullWidth label="Previsão de Retorno" type="date" value={formFabricante.previsao_retorno} onChange={(e) => setFormFabricante({ ...formFabricante, previsao_retorno: e.target.value })} InputLabelProps={{ shrink: true }} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirFabricante(false)}>Cancelar</Button>
-          <Button variant="contained" color="warning" onClick={handleEnviarFabricante}>Confirmar Envio</Button>
+          <Button variant="contained" color="warning" onClick={handleEnviarFabricante}>Enviar</Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={abrirRetorno} onClose={() => setAbrirRetorno(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Retorno do Fabricante</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
-            Peça: <strong>{pecaSelecionada?.descricao}</strong>
-          </Typography>
-          <FormControl sx={{ mb: 2 }}>
-            <FormLabel>Condição da peça retornada</FormLabel>
+          <FormControl sx={{ mt: 2, mb: 2 }}>
+            <FormLabel>Condição da Peça</FormLabel>
             <RadioGroup value={formRetorno.condicao} onChange={(e) => setFormRetorno({ ...formRetorno, condicao: e.target.value })}>
               <FormControlLabel value="reparada" control={<Radio />} label="Reparada — volta ao estoque" />
-              <FormControlLabel value="nova" control={<Radio />} label="Substituída por nova — volta ao estoque" />
               <FormControlLabel value="irreparavel" control={<Radio />} label="Irreparável — será descartada" />
             </RadioGroup>
           </FormControl>
-          {formRetorno.condicao !== 'irreparavel' && (
+          {formRetorno.condicao === 'reparada' && (
             <TextField select fullWidth label="Base de Destino" value={formRetorno.base_destino_id} onChange={(e) => setFormRetorno({ ...formRetorno, base_destino_id: e.target.value })}>
               {bases.map((b) => (
                 <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
@@ -322,7 +315,7 @@ const Pecas: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirRetorno(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleRetornoFabricante}>Confirmar Retorno</Button>
+          <Button variant="contained" color="success" onClick={handleRetornoFabricante}>Confirmar</Button>
         </DialogActions>
       </Dialog>
 
@@ -330,10 +323,10 @@ const Pecas: React.FC = () => {
         <DialogTitle>Nova Peça</DialogTitle>
         <DialogContent>
           <TextField fullWidth label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} sx={{ mt: 2, mb: 2 }} />
-          <TextField fullWidth label="Categoria" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} placeholder="ex: placa_processamento, sensor_velocidade" sx={{ mb: 2 }} />
+          <TextField fullWidth label="Categoria" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} sx={{ mb: 2 }} />
           <TextField select fullWidth label="Base Atual" value={form.base_atual_id} onChange={(e) => setForm({ ...form, base_atual_id: e.target.value })}>
-            {bases.map((base) => (
-              <MenuItem key={base.id} value={base.id}>{base.nome} - {base.estado}</MenuItem>
+            {bases.map((b) => (
+              <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
             ))}
           </TextField>
         </DialogContent>
