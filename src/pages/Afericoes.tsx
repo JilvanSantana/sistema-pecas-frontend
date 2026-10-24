@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -31,6 +32,7 @@ interface Equipamento {
   numero_serie?: string;
   localizacao_instalacao: string;
   contrato?: { numero_contrato: string; orgao_contratante: string } | null;
+  base?: { nome: string; estado: string } | null;
 }
 
 interface Afericao {
@@ -49,14 +51,19 @@ const calcularStatus = (dataValidade: string) => {
   const validade = new Date(dataValidade);
   const diasRestantes = Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
-  if (diasRestantes < 0) return { label: 'Vencida', color: 'error' as const };
-  if (diasRestantes <= 45) return { label: `Vence em ${diasRestantes}d`, color: 'warning' as const };
-  return { label: 'Válida', color: 'success' as const };
+  if (diasRestantes < 0) return { label: 'Vencida', color: 'error' as const, chave: 'vencida' };
+  if (diasRestantes <= 45) return { label: `Vence em ${diasRestantes}d`, color: 'warning' as const, chave: 'vencendo' };
+  return { label: 'Válida', color: 'success' as const, chave: 'valida' };
 };
 
 const Afericoes: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get('status') || '';
+  const [baseFiltro, setBaseFiltro] = useState(searchParams.get('base') || '');
+
   const [afericoes, setAfericoes] = useState<Afericao[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [bases, setBases] = useState<string[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [form, setForm] = useState({
@@ -68,6 +75,10 @@ const Afericoes: React.FC = () => {
     observacoes: '',
   });
 
+  useEffect(() => {
+    setBaseFiltro(searchParams.get('base') || '');
+  }, [searchParams]);
+
   const carregarDados = async () => {
     try {
       const [resAfericoes, resEquipamentos] = await Promise.all([
@@ -76,6 +87,15 @@ const Afericoes: React.FC = () => {
       ]);
       setAfericoes(resAfericoes.data);
       setEquipamentos(resEquipamentos.data);
+
+      const basesUnicas = Array.from(
+        new Set(
+          (resAfericoes.data as Afericao[])
+            .map((a) => a.equipamento?.base?.nome)
+            .filter(Boolean) as string[]
+        )
+      ).sort();
+      setBases(basesUnicas);
     } catch (error) {
       console.error(error);
     } finally {
@@ -106,19 +126,53 @@ const Afericoes: React.FC = () => {
   const nomeEquipamento = (eq: Equipamento) =>
     `${eq.tipo} - ${eq.numero_serie || 's/ série'} (${eq.localizacao_instalacao})`;
 
+  const afericoesFiltradas = (() => {
+    let lista = afericoes;
+    if (statusParam) {
+      lista = lista.filter((a) => calcularStatus(a.data_validade).chave === statusParam);
+    }
+    if (baseFiltro) {
+      lista = lista.filter((a) => a.equipamento?.base?.nome === baseFiltro);
+    }
+    return lista;
+  })();
+
+  const titulo = statusParam === 'vencida'
+    ? 'Aferições Vencidas'
+    : statusParam === 'vencendo'
+    ? 'Aferições Vencendo'
+    : 'Aferições / Calibrações';
+
   return (
     <Layout>
       <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Aferições / Calibrações
+          {titulo}{baseFiltro ? ` — ${baseFiltro}` : ''}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarAfericoes(afericoes)}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {bases.length > 0 && (
+            <TextField
+              select
+              size="small"
+              label="Filtrar por Base"
+              value={baseFiltro}
+              onChange={(e) => setBaseFiltro(e.target.value)}
+              sx={{ minWidth: 200 }}
+            >
+              <MenuItem value="">Todas as bases</MenuItem>
+              {bases.map((b) => (
+                <MenuItem key={b} value={b}>{b}</MenuItem>
+              ))}
+            </TextField>
+          )}
+          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarAfericoes(afericoesFiltradas)}>
             Exportar Excel
           </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-            Nova Aferição
-          </Button>
+          {!statusParam && (
+            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
+              Nova Aferição
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -141,14 +195,14 @@ const Afericoes: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {afericoes.length === 0 ? (
+              {afericoesFiltradas.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#666' }}>
-                    Nenhuma aferição cadastrada ainda
+                    Nenhuma aferição encontrada
                   </TableCell>
                 </TableRow>
               ) : (
-                afericoes.map((a) => {
+                afericoesFiltradas.map((a) => {
                   const status = calcularStatus(a.data_validade);
                   return (
                     <TableRow key={a.id} hover>
@@ -187,46 +241,11 @@ const Afericoes: React.FC = () => {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            fullWidth
-            type="date"
-            label="Data da Aferição"
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={form.data_afericao}
-            onChange={(e) => setForm({ ...form, data_afericao: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            type="date"
-            label="Data de Validade (opcional — calcula 12 meses automaticamente se vazio)"
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={form.data_validade}
-            onChange={(e) => setForm({ ...form, data_validade: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Órgão Responsável"
-            value={form.orgao_responsavel}
-            onChange={(e) => setForm({ ...form, orgao_responsavel: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Número do Certificado"
-            value={form.numero_certificado}
-            onChange={(e) => setForm({ ...form, numero_certificado: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Observações"
-            value={form.observacoes}
-            onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-            multiline
-            rows={3}
-          />
+          <TextField fullWidth type="date" label="Data da Aferição" slotProps={{ inputLabel: { shrink: true } }} value={form.data_afericao} onChange={(e) => setForm({ ...form, data_afericao: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth type="date" label="Data de Validade (opcional — calcula 12 meses automaticamente se vazio)" slotProps={{ inputLabel: { shrink: true } }} value={form.data_validade} onChange={(e) => setForm({ ...form, data_validade: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Órgão Responsável" value={form.orgao_responsavel} onChange={(e) => setForm({ ...form, orgao_responsavel: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Número do Certificado" value={form.numero_certificado} onChange={(e) => setForm({ ...form, numero_certificado: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Observações" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} multiline rows={3} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirDialog(false)}>Cancelar</Button>

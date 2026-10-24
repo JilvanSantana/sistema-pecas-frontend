@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -35,28 +36,25 @@ interface Contrato {
 }
 
 const calcularStatusPrazo = (dataFim: string | null, status: string) => {
-  if (status !== 'ativo') return { label: 'Encerrado', color: 'default' as const };
-  if (!dataFim) return { label: 'Ativo (sem prazo)', color: 'success' as const };
-
+  if (status !== 'ativo') return { label: 'Encerrado', color: 'default' as const, chave: 'encerrado' };
+  if (!dataFim) return { label: 'Ativo (sem prazo)', color: 'success' as const, chave: 'ativo' };
   const hoje = new Date();
   const fim = new Date(dataFim);
   const diasRestantes = Math.ceil((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (diasRestantes < 0) return { label: 'Vencido', color: 'error' as const };
-  if (diasRestantes <= 45) return { label: `Encerra em ${diasRestantes}d`, color: 'warning' as const };
-  return { label: 'Ativo', color: 'success' as const };
+  if (diasRestantes < 0) return { label: 'Vencido', color: 'error' as const, chave: 'encerrado' };
+  if (diasRestantes <= 45) return { label: `Encerra em ${diasRestantes}d`, color: 'warning' as const, chave: 'encerrando' };
+  return { label: 'Ativo', color: 'success' as const, chave: 'ativo' };
 };
 
 const Contratos: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get('status') || '';
+
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [form, setForm] = useState({
-    numero_contrato: '',
-    orgao_contratante: '',
-    sla_horas_atendimento: '',
-    data_inicio: '',
-    data_fim: '',
+    numero_contrato: '', orgao_contratante: '', sla_horas_atendimento: '', data_inicio: '', data_fim: '',
   });
 
   const carregarDados = async () => {
@@ -87,26 +85,34 @@ const Contratos: React.FC = () => {
     }
   };
 
+  const contratosFiltrados = statusParam
+    ? contratos.filter((c) => calcularStatusPrazo(c.data_fim, c.status).chave === statusParam)
+    : contratos;
+
+  const titulo = statusParam === 'encerrando'
+    ? 'Contratos Encerrando'
+    : statusParam === 'ativo'
+    ? 'Contratos Ativos'
+    : 'Contratos';
+
   return (
     <Layout>
       <Box sx={cabecalhoPaginaFixo}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Contratos
-        </Typography>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>{titulo}</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarContratos(contratos)}>
+          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarContratos(contratosFiltrados)}>
             Exportar Excel
           </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-            Novo Contrato
-          </Button>
+          {!statusParam && (
+            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
+              Novo Contrato
+            </Button>
+          )}
         </Box>
       </Box>
 
       {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-          <CircularProgress />
-        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
@@ -121,14 +127,14 @@ const Contratos: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {contratos.length === 0 ? (
+              {contratosFiltrados.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#666' }}>
-                    Nenhum contrato cadastrado ainda
+                    Nenhum contrato encontrado
                   </TableCell>
                 </TableRow>
               ) : (
-                contratos.map((c) => {
+                contratosFiltrados.map((c) => {
                   const statusPrazo = calcularStatusPrazo(c.data_fim, c.status);
                   return (
                     <TableRow key={c.id} hover>
@@ -137,9 +143,7 @@ const Contratos: React.FC = () => {
                       <TableCell>{c.sla_horas_atendimento}h</TableCell>
                       <TableCell>{new Date(c.data_inicio).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{c.data_fim ? new Date(c.data_fim).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                      <TableCell>
-                        <Chip label={statusPrazo.label} color={statusPrazo.color} size="small" />
-                      </TableCell>
+                      <TableCell><Chip label={statusPrazo.label} color={statusPrazo.color} size="small" /></TableCell>
                     </TableRow>
                   );
                 })
@@ -152,45 +156,11 @@ const Contratos: React.FC = () => {
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Novo Contrato</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Número do Contrato"
-            value={form.numero_contrato}
-            onChange={(e) => setForm({ ...form, numero_contrato: e.target.value })}
-            sx={{ mt: 2, mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Órgão Contratante"
-            value={form.orgao_contratante}
-            onChange={(e) => setForm({ ...form, orgao_contratante: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            type="number"
-            label="SLA de Atendimento (horas)"
-            value={form.sla_horas_atendimento}
-            onChange={(e) => setForm({ ...form, sla_horas_atendimento: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            type="date"
-            label="Data de Início"
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={form.data_inicio}
-            onChange={(e) => setForm({ ...form, data_inicio: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            type="date"
-            label="Data de Fim (opcional)"
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={form.data_fim}
-            onChange={(e) => setForm({ ...form, data_fim: e.target.value })}
-          />
+          <TextField fullWidth label="Número do Contrato" value={form.numero_contrato} onChange={(e) => setForm({ ...form, numero_contrato: e.target.value })} sx={{ mt: 2, mb: 2 }} />
+          <TextField fullWidth label="Órgão Contratante" value={form.orgao_contratante} onChange={(e) => setForm({ ...form, orgao_contratante: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth type="number" label="SLA de Atendimento (horas)" value={form.sla_horas_atendimento} onChange={(e) => setForm({ ...form, sla_horas_atendimento: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth type="date" label="Data de Início" slotProps={{ inputLabel: { shrink: true } }} value={form.data_inicio} onChange={(e) => setForm({ ...form, data_inicio: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth type="date" label="Data de Fim (opcional)" slotProps={{ inputLabel: { shrink: true } }} value={form.data_fim} onChange={(e) => setForm({ ...form, data_fim: e.target.value })} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirDialog(false)}>Cancelar</Button>

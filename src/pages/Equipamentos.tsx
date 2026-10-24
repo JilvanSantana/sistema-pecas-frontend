@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -86,12 +87,17 @@ const STATUS_DISPONIVEIS = [
   { valor: 'em_manutencao', label: 'Manutenção' },
 ];
 
+const STATUS_PARAM_MAP: Record<string, string> = {
+  ativo: 'ativo',
+  parado: 'inativo_aguardando_peca',
+  manutencao: 'em_manutencao',
+};
+
 const calcularStatusAfericao = (dataValidade?: string) => {
   if (!dataValidade) return { label: 'Sem aferição', color: 'default' as const };
   const hoje = new Date();
   const validade = new Date(dataValidade);
   const diasRestantes = Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-
   if (diasRestantes < 0) return { label: 'Aferição vencida', color: 'error' as const };
   if (diasRestantes <= 45) return { label: `Aferição vence em ${diasRestantes}d`, color: 'warning' as const };
   return { label: 'Aferição válida', color: 'success' as const };
@@ -99,50 +105,53 @@ const calcularStatusAfericao = (dataValidade?: string) => {
 
 const Equipamentos: React.FC = () => {
   const { usuario } = useAuth();
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get('status') || '';
+  const [baseFiltro, setBaseFiltro] = useState(searchParams.get('base') || '');
+
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [afericoesPorEquipamento, setAfericoesPorEquipamento] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [bases, setBases] = useState<any[]>([]);
+  const [basesDisponiveis, setBasesDisponiveis] = useState<string[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [qrSelecionado, setQrSelecionado] = useState<Equipamento | null>(null);
   const [equipamentoParaArquivar, setEquipamentoParaArquivar] = useState<Equipamento | null>(null);
   const [arquivando, setArquivando] = useState(false);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
   const [form, setForm] = useState({
-    tipo: '',
-    modelo: '',
-    fabricante: '',
-    numero_serie: '',
-    localizacao_instalacao: '',
-    quantidade_faixas: '',
-    base_responsavel_id: '',
-    contrato_id: '',
+    tipo: '', modelo: '', fabricante: '', numero_serie: '',
+    localizacao_instalacao: '', quantidade_faixas: '', base_responsavel_id: '', contrato_id: '',
   });
-
   const [abrirFiltroExport, setAbrirFiltroExport] = useState(false);
   const [tiposSelecionados, setTiposSelecionados] = useState<string[]>(TIPOS_DISPONIVEIS.map((t) => t.valor));
   const [statusSelecionados, setStatusSelecionados] = useState<string[]>(STATUS_DISPONIVEIS.map((s) => s.valor));
+
+  useEffect(() => {
+    setBaseFiltro(searchParams.get('base') || '');
+  }, [searchParams]);
 
   const carregarDados = async (incluirArquivados = mostrarArquivados) => {
     try {
       const res = await api.get(`/equipamento?incluir_arquivados=${incluirArquivados}`);
       setEquipamentos(res.data);
+      const nomesUnicos = Array.from(
+        new Set((res.data as Equipamento[]).map((e) => e.base?.nome).filter(Boolean) as string[])
+      ).sort();
+      setBasesDisponiveis(nomesUnicos);
       const resBases = await api.get(`/empresa/${usuario?.empresa_id}/bases`);
       setBases(resBases.data);
       const resContratos = await api.get('/contrato');
       setContratos(resContratos.data);
-
       const resAfericoes = await api.get('/afericao');
       const afericoes: Afericao[] = resAfericoes.data;
-      const maisRecentePorEquipamento: Record<string, string> = {};
+      const maisRecente: Record<string, string> = {};
       afericoes.forEach((a) => {
-        const atual = maisRecentePorEquipamento[a.equipamento_id];
-        if (!atual || new Date(a.data_validade) > new Date(atual)) {
-          maisRecentePorEquipamento[a.equipamento_id] = a.data_validade;
-        }
+        const atual = maisRecente[a.equipamento_id];
+        if (!atual || new Date(a.data_validade) > new Date(atual)) maisRecente[a.equipamento_id] = a.data_validade;
       });
-      setAfericoesPorEquipamento(maisRecentePorEquipamento);
+      setAfericoesPorEquipamento(maisRecente);
     } catch (error) {
       console.error(error);
     } finally {
@@ -168,9 +177,7 @@ const Equipamentos: React.FC = () => {
       setAbrirDialog(false);
       setForm({ tipo: '', modelo: '', fabricante: '', numero_serie: '', localizacao_instalacao: '', quantidade_faixas: '', base_responsavel_id: '', contrato_id: '' });
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const handleArquivar = async () => {
@@ -180,68 +187,64 @@ const Equipamentos: React.FC = () => {
       await api.patch(`/equipamento/${equipamentoParaArquivar.id}/arquivar`);
       setEquipamentoParaArquivar(null);
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setArquivando(false);
-    }
+    } catch (error) { console.error(error); } finally { setArquivando(false); }
   };
 
   const handleDesarquivar = async (id: string) => {
-    try {
-      await api.patch(`/equipamento/${id}/desarquivar`);
-      carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    try { await api.patch(`/equipamento/${id}/desarquivar`); carregarDados(); } catch (error) { console.error(error); }
   };
 
-  const toggleTipo = (valor: string) => {
-    setTiposSelecionados((prev) =>
-      prev.includes(valor) ? prev.filter((t) => t !== valor) : [...prev, valor]
-    );
-  };
-
-  const toggleStatus = (valor: string) => {
-    setStatusSelecionados((prev) =>
-      prev.includes(valor) ? prev.filter((s) => s !== valor) : [...prev, valor]
-    );
-  };
+  const toggleTipo = (valor: string) => setTiposSelecionados((prev) => prev.includes(valor) ? prev.filter((t) => t !== valor) : [...prev, valor]);
+  const toggleStatus = (valor: string) => setStatusSelecionados((prev) => prev.includes(valor) ? prev.filter((s) => s !== valor) : [...prev, valor]);
 
   const handleExportar = () => {
-    const filtrados = equipamentos.filter(
-      (e) => tiposSelecionados.includes(e.tipo) && statusSelecionados.includes(e.status_operacional)
-    );
-    exportarEquipamentos(filtrados);
+    exportarEquipamentos(equipamentos.filter((e) => tiposSelecionados.includes(e.tipo) && statusSelecionados.includes(e.status_operacional)));
     setAbrirFiltroExport(false);
   };
+
+  const equipamentosFiltrados = (() => {
+    let lista = equipamentos;
+    if (statusParam && STATUS_PARAM_MAP[statusParam]) {
+      lista = lista.filter((e) => e.status_operacional === STATUS_PARAM_MAP[statusParam]);
+    }
+    if (baseFiltro) {
+      lista = lista.filter((e) => e.base?.nome === baseFiltro);
+    }
+    return lista;
+  })();
+
+  const titulo = statusParam === 'ativo' ? 'Equipamentos Ativos' : statusParam === 'parado' ? 'Equipamentos Parados' : 'Equipamentos';
 
   return (
     <Layout>
       <Box sx={cabecalhoPaginaFixo}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-            Equipamentos
+            {titulo}{baseFiltro ? ` — ${baseFiltro}` : ''}
           </Typography>
-          <FormControlLabel
-            control={<Switch checked={mostrarArquivados} onChange={(e) => handleToggleArquivados(e.target.checked)} size="small" />}
-            label={<Typography variant="body2" color="text.secondary">Ver arquivados</Typography>}
-          />
+          {!statusParam && (
+            <FormControlLabel
+              control={<Switch checked={mostrarArquivados} onChange={(e) => handleToggleArquivados(e.target.checked)} size="small" />}
+              label={<Typography variant="body2" color="text.secondary">Ver arquivados</Typography>}
+            />
+          )}
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<Download />} onClick={() => setAbrirFiltroExport(true)}>
-            Exportar Excel
-          </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-            Novo Equipamento
-          </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {basesDisponiveis.length > 0 && (
+            <TextField select size="small" label="Filtrar por Base" value={baseFiltro} onChange={(e) => setBaseFiltro(e.target.value)} sx={{ minWidth: 200 }}>
+              <MenuItem value="">Todas as bases</MenuItem>
+              {basesDisponiveis.map((b) => <MenuItem key={b} value={b}>{b}</MenuItem>)}
+            </TextField>
+          )}
+          <Button variant="outlined" startIcon={<Download />} onClick={() => setAbrirFiltroExport(true)}>Exportar Excel</Button>
+          {!statusParam && (
+            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Novo Equipamento</Button>
+          )}
         </Box>
       </Box>
 
       {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-          <CircularProgress />
-        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
@@ -261,13 +264,12 @@ const Equipamentos: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {equipamentos.map((eq) => {
+              {equipamentosFiltrados.map((eq) => {
                 const statusAfericao = calcularStatusAfericao(afericoesPorEquipamento[eq.id]);
                 return (
                   <TableRow key={eq.id} hover sx={eq.arquivado ? { opacity: 0.55, backgroundColor: '#fafafa' } : {}}>
                     <TableCell sx={{ textTransform: 'capitalize' }}>
-                      {eq.tipo}
-                      {eq.arquivado && <Chip label="Arquivado" size="small" sx={{ ml: 1 }} />}
+                      {eq.tipo}{eq.arquivado && <Chip label="Arquivado" size="small" sx={{ ml: 1 }} />}
                     </TableCell>
                     <TableCell>{eq.modelo}</TableCell>
                     <TableCell>{eq.fabricante || '-'}</TableCell>
@@ -276,35 +278,15 @@ const Equipamentos: React.FC = () => {
                     <TableCell>{eq.quantidade_faixas ?? '-'}</TableCell>
                     <TableCell>{eq.base?.nome} - {eq.base?.estado}</TableCell>
                     <TableCell>{eq.contrato ? `${eq.contrato.numero_contrato} - ${eq.contrato.orgao_contratante}` : '-'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={statusLabels[eq.status_operacional] || eq.status_operacional}
-                        color={statusCores[eq.status_operacional] || 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={statusAfericao.label} color={statusAfericao.color} size="small" />
-                    </TableCell>
+                    <TableCell><Chip label={statusLabels[eq.status_operacional] || eq.status_operacional} color={statusCores[eq.status_operacional] || 'default'} size="small" /></TableCell>
+                    <TableCell><Chip label={statusAfericao.label} color={statusAfericao.color} size="small" /></TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Tooltip title="Ver QR Code">
-                          <IconButton color="primary" size="small" onClick={() => setQrSelecionado(eq)}>
-                            <QrCode />
-                          </IconButton>
-                        </Tooltip>
+                        <Tooltip title="Ver QR Code"><IconButton color="primary" size="small" onClick={() => setQrSelecionado(eq)}><QrCode /></IconButton></Tooltip>
                         {eq.arquivado ? (
-                          <Tooltip title="Restaurar equipamento">
-                            <IconButton color="success" size="small" onClick={() => handleDesarquivar(eq.id)}>
-                              <Unarchive />
-                            </IconButton>
-                          </Tooltip>
+                          <Tooltip title="Restaurar equipamento"><IconButton color="success" size="small" onClick={() => handleDesarquivar(eq.id)}><Unarchive /></IconButton></Tooltip>
                         ) : (
-                          <Tooltip title="Arquivar equipamento">
-                            <IconButton color="error" size="small" onClick={() => setEquipamentoParaArquivar(eq)}>
-                              <Archive />
-                            </IconButton>
-                          </Tooltip>
+                          <Tooltip title="Arquivar equipamento"><IconButton color="error" size="small" onClick={() => setEquipamentoParaArquivar(eq)}><Archive /></IconButton></Tooltip>
                         )}
                       </Box>
                     </TableCell>
@@ -316,25 +298,13 @@ const Equipamentos: React.FC = () => {
         </TableContainer>
       )}
 
-      {qrSelecionado && (
-        <QrCodeModal
-          aberto={!!qrSelecionado}
-          onFechar={() => setQrSelecionado(null)}
-          codigo={qrSelecionado.qr_code}
-          descricao={qrSelecionado.modelo}
-          categoria={qrSelecionado.tipo}
-        />
-      )}
+      {qrSelecionado && <QrCodeModal aberto={!!qrSelecionado} onFechar={() => setQrSelecionado(null)} codigo={qrSelecionado.qr_code} descricao={qrSelecionado.modelo} categoria={qrSelecionado.tipo} />}
 
       <Dialog open={!!equipamentoParaArquivar} onClose={() => setEquipamentoParaArquivar(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Arquivar equipamento?</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            O equipamento <strong>{equipamentoParaArquivar?.tipo} — {equipamentoParaArquivar?.modelo} (Nº {equipamentoParaArquivar?.numero_serie})</strong> será removido da lista.
-          </DialogContentText>
-          <DialogContentText sx={{ mt: 2, fontSize: 14, color: '#666' }}>
-            O histórico de aferições, ordens de serviço e movimentações de peças será preservado. Você pode restaurá-lo depois ativando "Mostrar arquivados".
-          </DialogContentText>
+          <DialogContentText>O equipamento <strong>{equipamentoParaArquivar?.tipo} — {equipamentoParaArquivar?.modelo} (Nº {equipamentoParaArquivar?.numero_serie})</strong> será removido da lista.</DialogContentText>
+          <DialogContentText sx={{ mt: 2, fontSize: 14, color: '#666' }}>O histórico de aferições, ordens de serviço e movimentações de peças será preservado. Você pode restaurá-lo depois ativando "Mostrar arquivados".</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEquipamentoParaArquivar(null)}>Cancelar</Button>
@@ -358,15 +328,11 @@ const Equipamentos: React.FC = () => {
           <TextField fullWidth label="Localização (rodovia/km/endereço)" value={form.localizacao_instalacao} onChange={(e) => setForm({ ...form, localizacao_instalacao: e.target.value })} sx={{ mb: 2 }} />
           <TextField fullWidth type="number" label="Quantidade de Faixas" value={form.quantidade_faixas} onChange={(e) => setForm({ ...form, quantidade_faixas: e.target.value })} sx={{ mb: 2 }} />
           <TextField select fullWidth label="Base Responsável" value={form.base_responsavel_id} onChange={(e) => setForm({ ...form, base_responsavel_id: e.target.value })} sx={{ mb: 2 }}>
-            {bases.map((base) => (
-              <MenuItem key={base.id} value={base.id}>{base.nome} - {base.estado}</MenuItem>
-            ))}
+            {bases.map((base) => <MenuItem key={base.id} value={base.id}>{base.nome} - {base.estado}</MenuItem>)}
           </TextField>
           <TextField select fullWidth label="Contrato (opcional)" value={form.contrato_id} onChange={(e) => setForm({ ...form, contrato_id: e.target.value })}>
             <MenuItem value="">Nenhum</MenuItem>
-            {contratos.map((c) => (
-              <MenuItem key={c.id} value={c.id}>{c.numero_contrato} - {c.orgao_contratante}</MenuItem>
-            ))}
+            {contratos.map((c) => <MenuItem key={c.id} value={c.id}>{c.numero_contrato} - {c.orgao_contratante}</MenuItem>)}
           </TextField>
         </DialogContent>
         <DialogActions>
@@ -379,25 +345,9 @@ const Equipamentos: React.FC = () => {
         <DialogTitle>Exportar Equipamentos</DialogTitle>
         <DialogContent>
           <Typo variant="subtitle2" sx={{ mt: 1, mb: 1, fontWeight: 'bold' }}>Tipo</Typo>
-          <FormGroup>
-            {TIPOS_DISPONIVEIS.map((t) => (
-              <FormControlLabel
-                key={t.valor}
-                control={<Checkbox checked={tiposSelecionados.includes(t.valor)} onChange={() => toggleTipo(t.valor)} />}
-                label={t.label}
-              />
-            ))}
-          </FormGroup>
+          <FormGroup>{TIPOS_DISPONIVEIS.map((t) => <FormControlLabel key={t.valor} control={<Checkbox checked={tiposSelecionados.includes(t.valor)} onChange={() => toggleTipo(t.valor)} />} label={t.label} />)}</FormGroup>
           <Typo variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>Status</Typo>
-          <FormGroup>
-            {STATUS_DISPONIVEIS.map((s) => (
-              <FormControlLabel
-                key={s.valor}
-                control={<Checkbox checked={statusSelecionados.includes(s.valor)} onChange={() => toggleStatus(s.valor)} />}
-                label={s.label}
-              />
-            ))}
-          </FormGroup>
+          <FormGroup>{STATUS_DISPONIVEIS.map((s) => <FormControlLabel key={s.valor} control={<Checkbox checked={statusSelecionados.includes(s.valor)} onChange={() => toggleStatus(s.valor)} />} label={s.label} />)}</FormGroup>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirFiltroExport(false)}>Cancelar</Button>

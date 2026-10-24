@@ -144,18 +144,21 @@ const Dashboard: React.FC = () => {
     return lista.sort((a, b) => (a.prioridade === 'alta' ? -1 : 1) - (b.prioridade === 'alta' ? -1 : 1));
   }, [afericoes, pecas, equipamentos, ranking, ultimaMovPorPeca]);
 
+  const baseNome = baseSelecionadaId ? (bases.find((b) => b.id === baseSelecionadaId)?.nome || '') : '';
+  const baseQuery = baseNome ? `&base=${encodeURIComponent(baseNome)}` : '';
+
   const cardsCompliance = [
-    { titulo: 'Afericoes Vencidas', valor: statsAtual.afericoesVencidas, icone: <VerifiedUser sx={{ fontSize: 40, color: '#d32f2f' }} />, cor: statsAtual.afericoesVencidas > 0 ? '#ffebee' : '#e8f5e9', rota: '/afericoes' },
-    { titulo: 'Afericoes Vencendo (45d)', valor: statsAtual.afericoesVencendo, icone: <VerifiedUser sx={{ fontSize: 40, color: '#f57c00' }} />, cor: statsAtual.afericoesVencendo > 0 ? '#fff3e0' : '#e8f5e9', rota: '/afericoes' },
-    { titulo: 'Contratos Encerrando (45d)', valor: statsAtual.contratosEncerrando, icone: <Description sx={{ fontSize: 40, color: '#f57c00' }} />, cor: statsAtual.contratosEncerrando > 0 ? '#fff3e0' : '#e8f5e9', rota: '/contratos' },
-    { titulo: 'Pecas em Atraso Critico', valor: statsAtual.pecasAtrasoCritico, icone: <AccessTime sx={{ fontSize: 40, color: '#d32f2f' }} />, cor: statsAtual.pecasAtrasoCritico > 0 ? '#ffebee' : '#e8f5e9', rota: '/pecas' },
+    { titulo: 'Afericoes Vencidas', valor: statsAtual.afericoesVencidas, icone: <VerifiedUser sx={{ fontSize: 40, color: '#d32f2f' }} />, cor: statsAtual.afericoesVencidas > 0 ? '#ffebee' : '#e8f5e9', rota: `/afericoes?status=vencida${baseQuery}` },
+    { titulo: 'Afericoes Vencendo (45d)', valor: statsAtual.afericoesVencendo, icone: <VerifiedUser sx={{ fontSize: 40, color: '#f57c00' }} />, cor: statsAtual.afericoesVencendo > 0 ? '#fff3e0' : '#e8f5e9', rota: `/afericoes?status=vencendo${baseQuery}` },
+    { titulo: 'Contratos Encerrando (45d)', valor: statsAtual.contratosEncerrando, icone: <Description sx={{ fontSize: 40, color: '#f57c00' }} />, cor: statsAtual.contratosEncerrando > 0 ? '#fff3e0' : '#e8f5e9', rota: `/contratos?status=encerrando` },
+    { titulo: 'Pecas em Atraso Critico', valor: statsAtual.pecasAtrasoCritico, icone: <AccessTime sx={{ fontSize: 40, color: '#d32f2f' }} />, cor: statsAtual.pecasAtrasoCritico > 0 ? '#ffebee' : '#e8f5e9', rota: `/pecas?status=em_transito${baseQuery}` },
   ];
 
   const cardsOperacionais = [
-    { titulo: 'Equipamentos Ativos', valor: statsAtual.equipAtivos, total: statsAtual.equipTotal, icone: <Build sx={{ fontSize: 40, color: '#1976d2' }} />, cor: '#e3f2fd', rota: '/equipamentos?status=ativo' },
-    { titulo: 'Equipamentos Parados', valor: statsAtual.equipParados, total: statsAtual.equipTotal, icone: <Warning sx={{ fontSize: 40, color: '#d32f2f' }} />, cor: '#ffebee', rota: '/equipamentos?status=inativo_aguardando_peca' },
-    { titulo: 'Pecas em Estoque', valor: statsAtual.pecasEstoque, total: statsAtual.pecasTotal, icone: <Inventory sx={{ fontSize: 40, color: '#388e3c' }} />, cor: '#e8f5e9', rota: '/pecas?status=em_estoque_base' },
-    { titulo: 'Pecas em Transito', valor: statsAtual.pecasTransito, total: statsAtual.pecasTotal, icone: <LocalShipping sx={{ fontSize: 40, color: '#f57c00' }} />, cor: '#fff3e0', rota: '/pecas?status=em_transito' },
+    { titulo: 'Equipamentos Ativos', valor: statsAtual.equipAtivos, total: statsAtual.equipTotal, icone: <Build sx={{ fontSize: 40, color: '#1976d2' }} />, cor: '#e3f2fd', rota: `/equipamentos?status=ativo${baseQuery}` },
+    { titulo: 'Equipamentos Parados', valor: statsAtual.equipParados, total: statsAtual.equipTotal, icone: <Warning sx={{ fontSize: 40, color: '#d32f2f' }} />, cor: '#ffebee', rota: `/equipamentos?status=parado${baseQuery}` },
+    { titulo: 'Pecas em Estoque', valor: statsAtual.pecasEstoque, total: statsAtual.pecasTotal, icone: <Inventory sx={{ fontSize: 40, color: '#388e3c' }} />, cor: '#e8f5e9', rota: `/pecas?status=em_estoque_base${baseQuery}` },
+    { titulo: 'Pecas em Transito', valor: statsAtual.pecasTransito, total: statsAtual.pecasTotal, icone: <LocalShipping sx={{ fontSize: 40, color: '#f57c00' }} />, cor: '#fff3e0', rota: `/pecas?status=em_transito${baseQuery}` },
   ];
 
   const renderCards = (cards: any[]) => (
