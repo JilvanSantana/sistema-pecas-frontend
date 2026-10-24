@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -82,9 +82,15 @@ const LIMITE_CRITICO_DIAS = 15;
 const Pecas: React.FC = () => {
   const { usuario } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get('status') || '';
+  const filtroAguardando = location.pathname === '/aguardando-remessa';
+
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [ultimaMovPorPeca, setUltimaMovPorPeca] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
+  const [baseFiltro, setBaseFiltro] = useState(searchParams.get('base') || '');
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [abrirFabricante, setAbrirFabricante] = useState(false);
   const [abrirRetorno, setAbrirRetorno] = useState(false);
@@ -106,6 +112,10 @@ const Pecas: React.FC = () => {
     categoria: '',
     base_atual_id: '',
   });
+
+  useEffect(() => {
+    setBaseFiltro(searchParams.get('base') || '');
+  }, [searchParams]);
 
   const carregarDados = async () => {
     try {
@@ -172,17 +182,55 @@ const Pecas: React.FC = () => {
     }
   };
 
+  const pecasFiltradas = (() => {
+    let lista = filtroAguardando
+      ? pecas.filter(p => STATUS_AGUARDANDO.includes(p.status_atual))
+      : pecas;
+    if (statusParam && !filtroAguardando) {
+      lista = lista.filter(p => p.status_atual === statusParam);
+    }
+    if (baseFiltro) {
+      lista = lista.filter(p => p.base?.nome === baseFiltro);
+    }
+    return lista;
+  })();
+
+  const titulo = filtroAguardando
+    ? 'Aguardando Remessa'
+    : statusParam === 'em_estoque_base'
+    ? 'Peças em Estoque'
+    : statusParam === 'em_transito'
+    ? 'Peças em Trânsito'
+    : 'Peças';
+
   return (
     <Layout>
       <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Peças</Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecas)}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+          {titulo}{baseFiltro ? ` — ${baseFiltro}` : ''}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            select
+            size="small"
+            label="Filtrar por Base"
+            value={baseFiltro}
+            onChange={(e) => setBaseFiltro(e.target.value)}
+            sx={{ minWidth: 200 }}
+          >
+            <MenuItem value="">Todas as Bases</MenuItem>
+            {bases.map((b) => (
+              <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>
+            ))}
+          </TextField>
+          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecasFiltradas)}>
             Exportar Excel
           </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-            Nova Peça
-          </Button>
+          {!filtroAguardando && !statusParam && (
+            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
+              Nova Peça
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -205,7 +253,7 @@ const Pecas: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {pecas.map((peca) => {
+              {pecasFiltradas.map((peca) => {
                 const precisaAlerta = STATUS_AGUARDANDO.includes(peca.status_atual);
                 const dataReferencia = ultimaMovPorPeca[peca.id] || peca.criado_em;
                 const prazo = precisaAlerta && dataReferencia
