@@ -7,6 +7,7 @@ interface Usuario {
   email: string;
   papel: string;
   empresa_id: string;
+  base_id?: string;
 }
 
 interface AuthContextData {
