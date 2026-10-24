@@ -22,7 +22,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { Add, Block, CheckCircle } from '@mui/icons-material';
+import { Add, Block, CheckCircle, Delete } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
@@ -64,6 +64,7 @@ const Empresas: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [empresaParaBloquear, setEmpresaParaBloquear] = useState<Empresa | null>(null);
+  const [empresaParaDeletar, setEmpresaParaDeletar] = useState<Empresa | null>(null);
   const [processando, setProcessando] = useState(false);
   const [form, setForm] = useState({
     razao_social: '',
@@ -118,6 +119,21 @@ const Empresas: React.FC = () => {
       carregarDados();
     } catch (error) {
       console.error(error);
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleDeletar = async () => {
+    if (!empresaParaDeletar) return;
+    try {
+      setProcessando(true);
+      await api.delete(`/empresa/${empresaParaDeletar.id}`);
+      setEmpresaParaDeletar(null);
+      carregarDados();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Erro ao excluir empresa';
+      alert(msg);
     } finally {
       setProcessando(false);
     }
@@ -192,6 +208,15 @@ const Empresas: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                       )}
+                      <Tooltip title="Excluir empresa">
+                        <IconButton
+                          size="small"
+                          sx={{ color: '#9e9e9e', ml: 0.5 }}
+                          onClick={() => setEmpresaParaDeletar(e)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))
@@ -201,6 +226,7 @@ const Empresas: React.FC = () => {
         </TableContainer>
       )}
 
+      {/* Dialog bloquear/desbloquear */}
       <Dialog open={!!empresaParaBloquear} onClose={() => setEmpresaParaBloquear(null)} maxWidth="xs" fullWidth>
         <DialogTitle>
           {empresaParaBloquear?.status_assinatura === 'bloqueada' ? 'Desbloquear empresa?' : 'Bloquear empresa?'}
@@ -229,6 +255,34 @@ const Empresas: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Dialog excluir empresa */}
+      <Dialog open={!!empresaParaDeletar} onClose={() => setEmpresaParaDeletar(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ color: '#d32f2f' }}>Excluir empresa?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Você está prestes a excluir permanentemente a empresa:
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 1, fontWeight: 'bold', fontSize: 16 }}>
+            {empresaParaDeletar?.razao_social}
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2, fontSize: 14, color: '#d32f2f' }}>
+            ⚠️ Esta ação é irreversível. Todos os dados da empresa (bases, usuários, equipamentos, peças e movimentações) serão excluídos permanentemente.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEmpresaParaDeletar(null)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeletar}
+            disabled={processando}
+          >
+            {processando ? <CircularProgress size={22} color="inherit" /> : 'Excluir permanentemente'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog nova empresa */}
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Nova Empresa (Onboarding)</DialogTitle>
         <DialogContent>
