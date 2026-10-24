@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, CircularProgress, Chip,
@@ -74,7 +74,7 @@ const EstoquePorBase: React.FC = () => {
             <Accordion key={base.id} defaultExpanded={lista.length > 0} sx={{ mb: 1 }}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography fontWeight="bold">{base.nome} - {base.estado}</Typography>
+                  <Typography sx={{ fontWeight: "bold" }}>{base.nome} - {base.estado}</Typography>
                   <Chip label={`${lista.length} peca(s)`} size="small" color={lista.length > 0 ? 'primary' : 'default'} />
                 </Box>
               </AccordionSummary>
@@ -87,7 +87,7 @@ const EstoquePorBase: React.FC = () => {
       ) : (
         <Paper>
           <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
-            <Typography fontWeight="bold">
+            <Typography sx={{ fontWeight: "bold" }}>
               {bases.find(b => b.id === usuario?.base_id)?.nome || 'Minha Base'} - {pecas.length} peca(s) em estoque
             </Typography>
           </Box>
