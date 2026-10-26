@@ -55,6 +55,7 @@ interface Contrato {
   id: string;
   numero_contrato: string;
   orgao_contratante: string;
+  data_fim?: string | null;
 }
 
 interface Afericao {
@@ -91,6 +92,16 @@ const STATUS_PARAM_MAP: Record<string, string> = {
   ativo: 'ativo',
   parado: 'inativo_aguardando_peca',
   manutencao: 'em_manutencao',
+};
+
+const calcularStatusContrato = (dataFim?: string | null) => {
+  if (!dataFim) return null;
+  const hoje = new Date();
+  const fim = new Date(dataFim);
+  const diasRestantes = Math.ceil((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  if (diasRestantes < 0) return { label: 'Contrato vencido', color: 'error' as const };
+  if (diasRestantes <= 30) return { label: `Vence em ${diasRestantes}d`, color: 'warning' as const };
+  return { label: 'Contrato ativo', color: 'success' as const };
 };
 
 const calcularStatusAfericao = (dataValidade?: string) => {
@@ -277,7 +288,14 @@ const Equipamentos: React.FC = () => {
                     <TableCell>{eq.localizacao_instalacao}</TableCell>
                     <TableCell>{eq.quantidade_faixas ?? '-'}</TableCell>
                     <TableCell>{eq.base?.nome} - {eq.base?.estado}</TableCell>
-                    <TableCell>{eq.contrato ? `${eq.contrato.numero_contrato} - ${eq.contrato.orgao_contratante}` : '-'}</TableCell>
+                    <TableCell>
+                      {eq.contrato ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <span>{eq.contrato.numero_contrato} - {eq.contrato.orgao_contratante}</span>
+                          {(() => { const s = calcularStatusContrato(eq.contrato.data_fim); return s ? <Chip label={s.label} color={s.color} size="small" /> : null; })()}
+                        </Box>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell><Chip label={statusLabels[eq.status_operacional] || eq.status_operacional} color={statusCores[eq.status_operacional] || 'default'} size="small" /></TableCell>
                     <TableCell><Chip label={statusAfericao.label} color={statusAfericao.color} size="small" /></TableCell>
                     <TableCell>
