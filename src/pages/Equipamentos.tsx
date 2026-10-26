@@ -48,7 +48,7 @@ interface Equipamento {
   qr_code: string;
   arquivado: boolean;
   base: { nome: string; estado: string };
-  contrato: { numero_contrato: string; orgao_contratante: string } | null;
+  contrato: Contrato | null;
 }
 
 interface Contrato {
