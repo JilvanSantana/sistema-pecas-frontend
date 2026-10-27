@@ -17,6 +17,7 @@ const AguardandoRemessa = lazy(() => import('./pages/AguardandoRemessa'));
 const Afericoes = lazy(() => import('./pages/Afericoes'));
 const Contratos = lazy(() => import('./pages/Contratos'));
 const Empresas = lazy(() => import('./pages/Empresas'));
+const Logs = lazy(() => import('./pages/Logs'));
 const EstoquePorBase = lazy(() => import('./pages/EstoquePorBase'));
 const PecasManutencao = lazy(() => import('./pages/PecasManutencao'));
 
@@ -56,6 +57,7 @@ const App: React.FC = () => {
             <Route path="/empresas" element={<RotaProtegida><Empresas /></RotaProtegida>} />
             <Route path="/estoque-base" element={<RotaProtegida><EstoquePorBase /></RotaProtegida>} />
             <Route path="/manutencao" element={<RotaProtegida><PecasManutencao /></RotaProtegida>} />
+            <Route path="/logs" element={<RotaProtegida><Logs /></RotaProtegida>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Suspense>
