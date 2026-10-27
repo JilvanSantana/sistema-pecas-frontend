@@ -130,20 +130,28 @@ const HistoricoPeca: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dados.movimentacoes.map((m) => (
-                  <TableRow key={m.id} hover>
-                    <TableCell>{new Date(m.data_envio).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{motivoLabels[m.motivo_envio] || m.motivo_envio}</TableCell>
-                    <TableCell>{m.origem} → {m.destino}</TableCell>
-                    <TableCell>{m.codigo_rastreio || '—'}</TableCell>
-                    <TableCell>
-                      <Chip label={m.causou_parada ? 'Sim' : 'Não'} color={m.causou_parada ? 'error' : 'success'} size="small" />
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={m.status} color={statusCores[m.status] || 'default'} size="small" />
+                {(dados.movimentacoes ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#666' }}>
+                      Nenhuma movimentação registrada ainda
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  (dados.movimentacoes ?? []).map((m) => (
+                    <TableRow key={m.id} hover>
+                      <TableCell>{new Date(m.data_envio).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{motivoLabels[m.motivo_envio] || m.motivo_envio}</TableCell>
+                      <TableCell>{m.origem} → {m.destino}</TableCell>
+                      <TableCell>{m.codigo_rastreio || '—'}</TableCell>
+                      <TableCell>
+                        <Chip label={m.causou_parada ? 'Sim' : 'Não'} color={m.causou_parada ? 'error' : 'success'} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={m.status} color={statusCores[m.status] || 'default'} size="small" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
