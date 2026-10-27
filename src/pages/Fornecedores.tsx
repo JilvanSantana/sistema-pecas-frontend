@@ -1,23 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
+  Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, CircularProgress, Dialog, DialogTitle,
+  DialogContent, DialogActions, TextField,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import Layout from '../components/Layout';
@@ -28,45 +13,39 @@ interface Fornecedor {
   id: string;
   nome: string;
   cnpj: string;
-  tipo: string;
-  contato: string;
   email: string;
   telefone: string;
-  ativo: boolean;
+  tipo_servico: string;
 }
 
 const Fornecedores: React.FC = () => {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
-  const [form, setForm] = useState({
-    nome: '',
-    cnpj: '',
-    tipo: 'fabricante',
-    contato: '',
-    email: '',
-    telefone: '',
-    observacoes: '',
-  });
+  const [form, setForm] = useState({ nome: '', cnpj: '', email: '', telefone: '', tipo_servico: '' });
 
-  const carregarDados = async () => {
+  const carregarDados = async (signal?: AbortSignal) => {
     try {
-      const res = await api.get('/fornecedor');
+      const res = await api.get('/fornecedor', { signal });
       setFornecedores(res.data);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED') console.error(error);
     } finally {
       setCarregando(false);
     }
   };
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    const ac = new AbortController();
+    carregarDados(ac.signal);
+    return () => ac.abort();
+  }, []);
 
   const handleSalvar = async () => {
     try {
       await api.post('/fornecedor', form);
       setAbrirDialog(false);
-      setForm({ nome: '', cnpj: '', tipo: 'fabricante', contato: '', email: '', telefone: '', observacoes: '' });
+      setForm({ nome: '', cnpj: '', email: '', telefone: '', tipo_servico: '' });
       carregarDados();
     } catch (error) {
       console.error(error);
@@ -75,65 +54,37 @@ const Fornecedores: React.FC = () => {
 
   return (
     <Layout>
-      <Box sx={cabecalhoPaginaFixo}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Fornecedores / Fabricantes
-        </Typography>
+      <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Fornecedores</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
           Novo Fornecedor
         </Button>
       </Box>
 
       {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-          <CircularProgress />
-        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell sx={celulaCabecalhoFixo}>Nome</TableCell>
-                <TableCell sx={celulaCabecalhoFixo}>Tipo</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>CNPJ</TableCell>
-                <TableCell sx={celulaCabecalhoFixo}>Contato</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Email</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Telefone</TableCell>
-                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Tipo de Serviço</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {fornecedores.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#666' }}>
-                    Nenhum fornecedor cadastrado ainda
-                  </TableCell>
+              {fornecedores.map((f) => (
+                <TableRow key={f.id} hover>
+                  <TableCell>{f.nome}</TableCell>
+                  <TableCell>{f.cnpj}</TableCell>
+                  <TableCell>{f.email}</TableCell>
+                  <TableCell>{f.telefone}</TableCell>
+                  <TableCell>{f.tipo_servico}</TableCell>
                 </TableRow>
-              ) : (
-                fornecedores.map((f) => (
-                  <TableRow key={f.id} hover>
-                    <TableCell>{f.nome}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={f.tipo === 'fabricante' ? 'Fabricante' : 'Fornecedor'}
-                        color={f.tipo === 'fabricante' ? 'primary' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{f.cnpj || '-'}</TableCell>
-                    <TableCell>{f.contato || '-'}</TableCell>
-                    <TableCell>{f.email || '-'}</TableCell>
-                    <TableCell>{f.telefone || '-'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={f.ativo ? 'Ativo' : 'Inativo'}
-                        color={f.ativo ? 'success' : 'error'}
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -142,60 +93,11 @@ const Fornecedores: React.FC = () => {
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Novo Fornecedor</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Nome"
-            value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
-            sx={{ mt: 2, mb: 2 }}
-          />
-          <TextField
-            select
-            fullWidth
-            label="Tipo"
-            value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-            sx={{ mb: 2 }}
-          >
-            <MenuItem value="fabricante">Fabricante</MenuItem>
-            <MenuItem value="fornecedor">Fornecedor</MenuItem>
-          </TextField>
-          <TextField
-            fullWidth
-            label="CNPJ"
-            value={form.cnpj}
-            onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Contato (nome da pessoa)"
-            value={form.contato}
-            onChange={(e) => setForm({ ...form, contato: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Telefone"
-            value={form.telefone}
-            onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Observações"
-            value={form.observacoes}
-            onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-            multiline
-            rows={3}
-          />
+          <TextField fullWidth label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} sx={{ mt: 2, mb: 2 }} />
+          <TextField fullWidth label="CNPJ" value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Telefone" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Tipo de Serviço" value={form.tipo_servico} onChange={(e) => setForm({ ...form, tipo_servico: e.target.value })} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirDialog(false)}>Cancelar</Button>

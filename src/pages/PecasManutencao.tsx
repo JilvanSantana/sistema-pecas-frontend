@@ -1,96 +1,122 @@
 ﻿import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, CircularProgress, Chip,
+  TableHead, TableRow, Paper, Chip, CircularProgress, TextField, MenuItem,
 } from '@mui/material';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import AlertaChip from '../components/AlertaChip';
+import { calcularTempoAberto } from '../utils/prazos';
+import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
+
+interface Peca {
+  id: string;
+  descricao: string;
+  codigo_qr: string;
+  categoria: string;
+  status_atual: string;
+  criado_em: string;
+  base: { nome: string; estado: string } | null;
+}
 
 interface Base { id: string; nome: string; estado: string; }
-interface Mov { data_envio: string; motivo_envio: string; descricao_problema: string | null; origem_tipo: string; origem_id: string; }
-interface Peca { id: string; descricao: string; categoria: string; status_atual: string; movimentacao: Mov[]; }
 
-const statusLabel: Record<string, { label: string; cor: 'warning' | 'error' }> = {
-  em_reparo_fabricante: { label: 'Em Reparo', cor: 'warning' },
-  defeituosa_aguardando_analise: { label: 'Aguardando Analise', cor: 'error' },
+const statusLabels: Record<string, string> = {
+  defeituosa_aguardando_analise: 'Defeituosa',
+  em_reparo_fabricante: 'Em Reparo',
 };
 
-const motivoLabel: Record<string, string> = {
-  manutencao_corretiva: 'Manutencao Corretiva',
-  manutencao_preventiva: 'Manutencao Preventiva',
-  garantia_troca: 'Garantia / Troca',
-  reposicao_estoque: 'Reposicao de Estoque',
-  transferencia_bases: 'Transferencia entre Bases',
-  devolucao: 'Devolucao',
-  outro: 'Outro',
+const statusCores: Record<string, 'error' | 'warning'> = {
+  defeituosa_aguardando_analise: 'error',
+  em_reparo_fabricante: 'warning',
 };
+
+const LIMITE_ATENCAO_DIAS = 7;
+const LIMITE_CRITICO_DIAS = 15;
 
 const PecasManutencao: React.FC = () => {
   const { usuario } = useAuth();
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [bases, setBases] = useState<Base[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [baseFiltro, setBaseFiltro] = useState('');
 
   useEffect(() => {
+    const ac = new AbortController();
     const carregar = async () => {
       try {
         const [resPecas, resBases] = await Promise.all([
-          api.get('/peca/manutencao'),
-          api.get(`/empresa/${usuario?.empresa_id}/bases`),
+          api.get('/peca/manutencao', { signal: ac.signal }),
+          api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal: ac.signal }),
         ]);
         setPecas(resPecas.data);
         setBases(resBases.data);
-      } catch (e) { console.error(e); }
-      finally { setCarregando(false); }
+      } catch (e: any) {
+        if (e?.code !== 'ERR_CANCELED') console.error(e);
+      } finally {
+        setCarregando(false);
+      }
     };
     carregar();
+    return () => ac.abort();
   }, [usuario]);
 
-  const nomeBase = (id: string) => {
-    const b = bases.find(b => b.id === id);
-    return b ? `${b.nome} - ${b.estado}` : id;
-  };
-
-  if (carregando) return <Layout><Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box></Layout>;
+  const pecasFiltradas = baseFiltro ? pecas.filter((p) => p.base?.nome === baseFiltro) : pecas;
 
   return (
     <Layout>
-      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>Pecas em Manutencao</Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#1a237e' }}>
-              <TableCell sx={{ color: 'white' }}>Peca</TableCell>
-              <TableCell sx={{ color: 'white' }}>Categoria</TableCell>
-              <TableCell sx={{ color: 'white' }}>Status</TableCell>
-              <TableCell sx={{ color: 'white' }}>Base de Origem</TableCell>
-              <TableCell sx={{ color: 'white' }}>Data do Envio</TableCell>
-              <TableCell sx={{ color: 'white' }}>Motivo</TableCell>
-              <TableCell sx={{ color: 'white' }}>Observacao</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pecas.length === 0 ? (
-              <TableRow><TableCell colSpan={7} align="center" sx={{ py: 4, color: '#999' }}>Nenhuma peca em manutencao</TableCell></TableRow>
-            ) : pecas.map(p => {
-              const mov = p.movimentacao?.[0];
-              const si = statusLabel[p.status_atual] || { label: p.status_atual, cor: 'default' as any };
-              return (
-                <TableRow key={p.id} hover>
-                  <TableCell>{p.descricao}</TableCell>
-                  <TableCell>{p.categoria}</TableCell>
-                  <TableCell><Chip label={si.label} color={si.cor} size="small" /></TableCell>
-                  <TableCell>{mov?.origem_tipo === 'base' ? nomeBase(mov.origem_id) : '-'}</TableCell>
-                  <TableCell>{mov ? new Date(mov.data_envio).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                  <TableCell>{mov ? (motivoLabel[mov.motivo_envio] || mov.motivo_envio) : '-'}</TableCell>
-                  <TableCell>{mov?.descricao_problema || '-'}</TableCell>
+      <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Peças em Manutenção</Typography>
+        <TextField select size="small" label="Filtrar por Base" value={baseFiltro} onChange={(e) => setBaseFiltro(e.target.value)} sx={{ minWidth: 200 }}>
+          <MenuItem value="">Todas as Bases</MenuItem>
+          {bases.map((b) => <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>)}
+        </TextField>
+      </Box>
+
+      {carregando ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
+      ) : (
+        <TableContainer component={Paper} sx={containerTabelaFixa}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={celulaCabecalhoFixo}>QR Code</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Descrição</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Categoria</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Base</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Tempo Aguardando</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pecasFiltradas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#666' }}>
+                    Nenhuma peça em manutenção
+                  </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                pecasFiltradas.map((p) => {
+                  const prazo = calcularTempoAberto(p.criado_em, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS);
+                  return (
+                    <TableRow key={p.id} hover>
+                      <TableCell><Typography variant="caption">{p.codigo_qr}</Typography></TableCell>
+                      <TableCell>{p.descricao}</TableCell>
+                      <TableCell>{p.categoria}</TableCell>
+                      <TableCell>{p.base ? `${p.base.nome} - ${p.base.estado}` : '—'}</TableCell>
+                      <TableCell>
+                        <Chip label={statusLabels[p.status_atual] || p.status_atual} color={statusCores[p.status_atual] || 'default'} size="small" />
+                      </TableCell>
+                      <TableCell><AlertaChip label={prazo.label} nivel={prazo.nivel} /></TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
     </Layout>
   );
 };

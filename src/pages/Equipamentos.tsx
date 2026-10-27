@@ -143,19 +143,21 @@ const Equipamentos: React.FC = () => {
     setBaseFiltro(searchParams.get('base') || '');
   }, [searchParams]);
 
-  const carregarDados = async (incluirArquivados = mostrarArquivados) => {
+  const carregarDados = async (incluirArquivados = mostrarArquivados, signal?: AbortSignal) => {
     try {
-      const res = await api.get(`/equipamento?incluir_arquivados=${incluirArquivados}`);
+      const [res, resBases, resContratos, resAfericoes] = await Promise.all([
+        api.get(`/equipamento?incluir_arquivados=${incluirArquivados}`, { signal }),
+        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
+        api.get('/contrato', { signal }),
+        api.get('/afericao', { signal }),
+      ]);
       setEquipamentos(res.data);
       const nomesUnicos = Array.from(
         new Set((res.data as Equipamento[]).map((e) => e.base?.nome).filter(Boolean) as string[])
       ).sort();
       setBasesDisponiveis(nomesUnicos);
-      const resBases = await api.get(`/empresa/${usuario?.empresa_id}/bases`);
       setBases(resBases.data);
-      const resContratos = await api.get('/contrato');
       setContratos(resContratos.data);
-      const resAfericoes = await api.get('/afericao');
       const afericoes: Afericao[] = resAfericoes.data;
       const maisRecente: Record<string, string> = {};
       afericoes.forEach((a) => {
@@ -163,14 +165,18 @@ const Equipamentos: React.FC = () => {
         if (!atual || new Date(a.data_validade) > new Date(atual)) maisRecente[a.equipamento_id] = a.data_validade;
       });
       setAfericoesPorEquipamento(maisRecente);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED') console.error(error);
     } finally {
       setCarregando(false);
     }
   };
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    const ac = new AbortController();
+    carregarDados(mostrarArquivados, ac.signal);
+    return () => ac.abort();
+  }, []);
 
   const handleToggleArquivados = async (checked: boolean) => {
     setMostrarArquivados(checked);

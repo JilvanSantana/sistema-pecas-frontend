@@ -44,27 +44,29 @@ const Dashboard: React.FC = () => {
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
   useEffect(() => {
+    const ac = new AbortController();
     const carregarDados = async () => {
       try {
         const [resBases, resEquipamentos, resPecas, resAfericoes, resMovimentacoes] = await Promise.all([
-          api.get(`/empresa/${usuario?.empresa_id}/bases`),
-          api.get('/equipamento'),
-          api.get('/peca'),
-          api.get('/afericao'),
-          api.get('/movimentacao'),
+          api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal: ac.signal }),
+          api.get('/equipamento', { signal: ac.signal }),
+          api.get('/peca', { signal: ac.signal }),
+          api.get('/afericao', { signal: ac.signal }),
+          api.get('/movimentacao', { signal: ac.signal }),
         ]);
         setBases(resBases.data);
         setEquipamentos(resEquipamentos.data);
         setPecas(resPecas.data);
         setAfericoes(resAfericoes.data);
         setMovimentacoes(resMovimentacoes.data);
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+      } catch (error: any) {
+        if (error?.code !== 'ERR_CANCELED') console.error('Erro ao carregar dados:', error);
       } finally {
         setCarregando(false);
       }
     };
     carregarDados();
+    return () => ac.abort();
   }, [usuario]);
 
   const ultimaMovPorPeca = useMemo(() => {

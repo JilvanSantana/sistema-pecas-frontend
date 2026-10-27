@@ -1,25 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  IconButton,
-  Tooltip,
+  Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Chip, CircularProgress, Dialog, DialogTitle,
+  DialogContent, DialogActions, TextField, MenuItem, IconButton, Tooltip,
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import Layout from '../components/Layout';
@@ -51,37 +34,32 @@ const Usuarios: React.FC = () => {
   const [abrirDialog, setAbrirDialog] = useState(false);
   const [abrirConfirmDelete, setAbrirConfirmDelete] = useState(false);
   const [usuarioParaDeletar, setUsuarioParaDeletar] = useState<Usuario | null>(null);
-  const [form, setForm] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    papel: 'operador',
-    base_id: '',
-  });
+  const [form, setForm] = useState({ nome: '', email: '', senha: '', papel: 'operador', base_id: '' });
 
-  const carregarDados = async () => {
+  const carregarDados = async (signal?: AbortSignal) => {
     try {
       const [resUsuarios, resBases] = await Promise.all([
-        api.get('/empresa/usuarios'),
-        api.get(`/empresa/${usuario?.empresa_id}/bases`),
+        api.get('/empresa/usuarios', { signal }),
+        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
       ]);
       setUsuarios(resUsuarios.data);
       setBases(resBases.data);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED') console.error(error);
     } finally {
       setCarregando(false);
     }
   };
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    const ac = new AbortController();
+    carregarDados(ac.signal);
+    return () => ac.abort();
+  }, []);
 
   const handleSalvar = async () => {
     try {
-      await api.post('/empresa/usuarios', {
-        ...form,
-        base_id: form.base_id || undefined,
-      });
+      await api.post('/empresa/usuarios', { ...form, base_id: form.base_id || undefined });
       setAbrirDialog(false);
       setForm({ nome: '', email: '', senha: '', papel: 'operador', base_id: '' });
       carregarDados();
@@ -111,15 +89,11 @@ const Usuarios: React.FC = () => {
     <Layout>
       <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Usuários</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-          Novo Usuário
-        </Button>
+        <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Novo Usuário</Button>
       </Box>
 
       {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-          <CircularProgress />
-        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
@@ -140,21 +114,10 @@ const Usuarios: React.FC = () => {
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{papelLabels[u.papel] || u.papel}</TableCell>
                   <TableCell>{u.base ? `${u.base.nome} - ${u.base.estado}` : '—'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={u.ativo ? 'Ativo' : 'Inativo'}
-                      color={u.ativo ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
+                  <TableCell><Chip label={u.ativo ? 'Ativo' : 'Inativo'} color={u.ativo ? 'success' : 'default'} size="small" /></TableCell>
                   <TableCell>
                     <Tooltip title="Excluir usuário">
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => confirmarDelete(u)}
-                        disabled={u.id === usuario?.id}
-                      >
+                      <IconButton color="error" size="small" onClick={() => confirmarDelete(u)} disabled={u.id === usuario?.id}>
                         <Delete />
                       </IconButton>
                     </Tooltip>
@@ -166,7 +129,6 @@ const Usuarios: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Dialog novo usuário */}
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Novo Usuário</DialogTitle>
         <DialogContent>
@@ -181,9 +143,7 @@ const Usuarios: React.FC = () => {
           </TextField>
           <TextField select fullWidth label="Base" value={form.base_id} onChange={(e) => setForm({ ...form, base_id: e.target.value })}>
             <MenuItem value="">Nenhuma</MenuItem>
-            {bases.map((b) => (
-              <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
-            ))}
+            {bases.map((b) => <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>)}
           </TextField>
         </DialogContent>
         <DialogActions>
@@ -192,14 +152,10 @@ const Usuarios: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog confirmar exclusão */}
       <Dialog open={abrirConfirmDelete} onClose={() => setAbrirConfirmDelete(false)}>
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
-          <Typography>
-            Tem certeza que deseja excluir o usuário <strong>{usuarioParaDeletar?.nome}</strong>?
-            Esta ação não pode ser desfeita.
-          </Typography>
+          <Typography>Tem certeza que deseja excluir o usuário <strong>{usuarioParaDeletar?.nome}</strong>? Esta ação não pode ser desfeita.</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirConfirmDelete(false)}>Cancelar</Button>

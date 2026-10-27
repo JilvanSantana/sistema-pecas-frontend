@@ -1,30 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  IconButton,
-  Tooltip,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormLabel,
-  FormControl,
+  Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Chip, CircularProgress, Dialog, DialogTitle,
+  DialogContent, DialogActions, TextField, MenuItem, IconButton, Tooltip,
+  RadioGroup, FormControlLabel, Radio, FormLabel, FormControl,
 } from '@mui/material';
 import { Add, CheckCircle, Download } from '@mui/icons-material';
 import Layout from '../components/Layout';
@@ -48,17 +27,11 @@ interface Movimentacao {
 }
 
 const statusCores: Record<string, 'warning' | 'info' | 'success' | 'error'> = {
-  enviada: 'warning',
-  em_transito: 'info',
-  recebida: 'success',
-  divergente: 'error',
+  enviada: 'warning', em_transito: 'info', recebida: 'success', divergente: 'error',
 };
 
 const statusLabels: Record<string, string> = {
-  enviada: 'Enviada',
-  em_transito: 'Em Trânsito',
-  recebida: 'Recebida',
-  divergente: 'Divergente',
+  enviada: 'Enviada', em_transito: 'Em Trânsito', recebida: 'Recebida', divergente: 'Divergente',
 };
 
 const motivoLabels: Record<string, string> = {
@@ -86,65 +59,50 @@ const Movimentacoes: React.FC = () => {
   const [pecas, setPecas] = useState<any[]>([]);
   const [bases, setBases] = useState<any[]>([]);
   const [form, setForm] = useState({
-    peca_id: '',
-    origem_tipo: 'base',
-    origem_id: '',
-    destino_tipo: 'base',
-    destino_id: '',
-    motivo_envio: '',
-    descricao_problema: '',
-    codigo_rastreio: '',
-    transportadora: '',
-    causou_parada: false,
+    peca_id: '', origem_tipo: 'base', origem_id: '', destino_tipo: 'base', destino_id: '',
+    motivo_envio: '', descricao_problema: '', codigo_rastreio: '', transportadora: '', causou_parada: false,
   });
 
-  const carregarDados = async () => {
+  const carregarDados = async (signal?: AbortSignal) => {
     try {
       const [resMov, resPecas, resBases] = await Promise.all([
-        api.get('/movimentacao'),
-        api.get('/peca'),
-        api.get(`/empresa/${usuario?.empresa_id}/bases`),
+        api.get('/movimentacao', { signal }),
+        api.get('/peca', { signal }),
+        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
       ]);
       setMovimentacoes(resMov.data);
       setPecas(resPecas.data);
       setBases(resBases.data);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED') console.error(error);
     } finally {
       setCarregando(false);
     }
   };
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    const ac = new AbortController();
+    carregarDados(ac.signal);
+    return () => ac.abort();
+  }, []);
 
   const handleSalvar = async () => {
     try {
       await api.post('/movimentacao', form);
       setAbrirDialog(false);
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
-  const handleAbrirConfirmar = (id: string) => {
-    setMovSelecionada(id);
-    setCondicao('boa');
-    setAbrirConfirmar(true);
-  };
+  const handleAbrirConfirmar = (id: string) => { setMovSelecionada(id); setCondicao('boa'); setAbrirConfirmar(true); };
 
   const handleConfirmarRecebimento = async () => {
     try {
-      await api.post(`/movimentacao/${movSelecionada}/confirmar`, {
-        confirmado: true,
-        condicao,
-      });
+      await api.post(`/movimentacao/${movSelecionada}/confirmar`, { confirmado: true, condicao });
       setAbrirConfirmar(false);
       setMovSelecionada(null);
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const estaAguardando = (status: string) => status === 'enviada' || status === 'em_transito';
@@ -152,23 +110,15 @@ const Movimentacoes: React.FC = () => {
   return (
     <Layout>
       <Box sx={cabecalhoPaginaFixo}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Movimentações
-        </Typography>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Movimentações</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarMovimentacoes(movimentacoes)}>
-            Exportar Excel
-          </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-            Nova Movimentação
-          </Button>
+          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarMovimentacoes(movimentacoes)}>Exportar Excel</Button>
+          <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Nova Movimentação</Button>
         </Box>
       </Box>
 
       {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-          <CircularProgress />
-        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
@@ -187,16 +137,10 @@ const Movimentacoes: React.FC = () => {
             </TableHead>
             <TableBody>
               {movimentacoes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 4, color: '#666' }}>
-                    Nenhuma movimentação registrada ainda
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={9} align="center" sx={{ py: 4, color: '#666' }}>Nenhuma movimentação registrada ainda</TableCell></TableRow>
               ) : (
                 movimentacoes.map((mov) => {
-                  const prazo = estaAguardando(mov.status)
-                    ? calcularTempoAberto(mov.data_envio, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS)
-                    : null;
+                  const prazo = estaAguardando(mov.status) ? calcularTempoAberto(mov.data_envio, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS) : null;
                   return (
                     <TableRow key={mov.id} hover>
                       <TableCell>
@@ -206,22 +150,14 @@ const Movimentacoes: React.FC = () => {
                       <TableCell>{motivoLabels[mov.motivo_envio] || mov.motivo_envio}</TableCell>
                       <TableCell>{mov.origem_tipo} → {mov.destino_tipo}</TableCell>
                       <TableCell>{mov.codigo_rastreio || '-'}</TableCell>
-                      <TableCell>
-                        <Chip label={mov.causou_parada ? 'Sim' : 'Não'} color={mov.causou_parada ? 'error' : 'success'} size="small" />
-                      </TableCell>
+                      <TableCell><Chip label={mov.causou_parada ? 'Sim' : 'Não'} color={mov.causou_parada ? 'error' : 'success'} size="small" /></TableCell>
                       <TableCell>{new Date(mov.data_envio).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>
-                        <Chip label={statusLabels[mov.status] || mov.status} color={statusCores[mov.status] || 'default'} size="small" />
-                      </TableCell>
-                      <TableCell>
-                        {prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}
-                      </TableCell>
+                      <TableCell><Chip label={statusLabels[mov.status] || mov.status} color={statusCores[mov.status] || 'default'} size="small" /></TableCell>
+                      <TableCell>{prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}</TableCell>
                       <TableCell>
                         {(mov.status === 'enviada' || mov.status === 'em_transito') && (
                           <Tooltip title="Confirmar Recebimento">
-                            <IconButton color="success" onClick={() => handleAbrirConfirmar(mov.id)}>
-                              <CheckCircle />
-                            </IconButton>
+                            <IconButton color="success" onClick={() => handleAbrirConfirmar(mov.id)}><CheckCircle /></IconButton>
                           </Tooltip>
                         )}
                       </TableCell>
@@ -255,24 +191,16 @@ const Movimentacoes: React.FC = () => {
         <DialogTitle>Nova Movimentação</DialogTitle>
         <DialogContent>
           <TextField select fullWidth label="Peça" value={form.peca_id} onChange={(e) => setForm({ ...form, peca_id: e.target.value })} sx={{ mt: 2, mb: 2 }}>
-            {pecas.map((p) => (
-              <MenuItem key={p.id} value={p.id}>{p.descricao} — {p.codigo_qr}</MenuItem>
-            ))}
+            {pecas.map((p) => <MenuItem key={p.id} value={p.id}>{p.descricao} — {p.codigo_qr}</MenuItem>)}
           </TextField>
           <TextField select fullWidth label="Base de Origem" value={form.origem_id} onChange={(e) => setForm({ ...form, origem_id: e.target.value })} sx={{ mb: 2 }}>
-            {bases.map((b) => (
-              <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
-            ))}
+            {bases.map((b) => <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>)}
           </TextField>
           <TextField select fullWidth label="Base de Destino" value={form.destino_id} onChange={(e) => setForm({ ...form, destino_id: e.target.value })} sx={{ mb: 2 }}>
-            {bases.map((b) => (
-              <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
-            ))}
+            {bases.map((b) => <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>)}
           </TextField>
           <TextField select fullWidth label="Motivo" value={form.motivo_envio} onChange={(e) => setForm({ ...form, motivo_envio: e.target.value })} sx={{ mb: 2 }}>
-            {Object.entries(motivoLabels).map(([value, label]) => (
-              <MenuItem key={value} value={value}>{label}</MenuItem>
-            ))}
+            {Object.entries(motivoLabels).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
           </TextField>
           <TextField fullWidth label="Descrição do Problema" value={form.descricao_problema} onChange={(e) => setForm({ ...form, descricao_problema: e.target.value })} sx={{ mb: 2 }} />
           <TextField fullWidth label="Código de Rastreio" value={form.codigo_rastreio} onChange={(e) => setForm({ ...form, codigo_rastreio: e.target.value })} sx={{ mb: 2 }} />

@@ -1,31 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  IconButton,
-  Tooltip,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormLabel,
-  FormControl,
+  Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Chip, CircularProgress, Dialog, DialogTitle,
+  DialogContent, DialogActions, TextField, MenuItem, IconButton, Tooltip,
+  RadioGroup, FormControlLabel, Radio, FormLabel, FormControl,
 } from '@mui/material';
 import { Add, QrCode, Factory, AssignmentReturn, Download, History } from '@mui/icons-material';
 import Layout from '../components/Layout';
@@ -48,31 +27,18 @@ interface Peca {
   tecnico: { usuario: { nome: string } } | null;
 }
 
-interface Movimentacao {
-  peca_id: string;
-  data_envio: string;
-}
+interface Movimentacao { peca_id: string; data_envio: string; }
 
 const statusCores: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
-  em_estoque_base: 'success',
-  em_transito: 'warning',
-  em_posse_tecnico: 'info',
-  instalada_equipamento: 'default',
-  nao_localizada: 'error',
-  em_reparo_fabricante: 'warning',
-  defeituosa_aguardando_analise: 'error',
-  descartada: 'default',
+  em_estoque_base: 'success', em_transito: 'warning', em_posse_tecnico: 'info',
+  instalada_equipamento: 'default', nao_localizada: 'error', em_reparo_fabricante: 'warning',
+  defeituosa_aguardando_analise: 'error', descartada: 'default',
 };
 
 const statusLabels: Record<string, string> = {
-  em_estoque_base: 'Em Estoque',
-  em_transito: 'Em Trânsito',
-  em_posse_tecnico: 'Com Técnico',
-  instalada_equipamento: 'Instalada',
-  nao_localizada: 'Não Localizada',
-  em_reparo_fabricante: 'Em Reparo',
-  defeituosa_aguardando_analise: 'Defeituosa',
-  descartada: 'Descartada',
+  em_estoque_base: 'Em Estoque', em_transito: 'Em Trânsito', em_posse_tecnico: 'Com Técnico',
+  instalada_equipamento: 'Instalada', nao_localizada: 'Não Localizada', em_reparo_fabricante: 'Em Reparo',
+  defeituosa_aguardando_analise: 'Defeituosa', descartada: 'Descartada',
 };
 
 const STATUS_AGUARDANDO = ['em_transito', 'defeituosa_aguardando_analise', 'em_reparo_fabricante'];
@@ -98,54 +64,42 @@ const Pecas: React.FC = () => {
   const [bases, setBases] = useState<any[]>([]);
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [qrSelecionado, setQrSelecionado] = useState<Peca | null>(null);
-  const [formFabricante, setFormFabricante] = useState({
-    fornecedor_id: '',
-    observacao: '',
-    previsao_retorno: '',
-  });
-  const [formRetorno, setFormRetorno] = useState({
-    base_destino_id: '',
-    condicao: 'reparada',
-  });
-  const [form, setForm] = useState({
-    descricao: '',
-    categoria: '',
-    base_atual_id: '',
-  });
+  const [formFabricante, setFormFabricante] = useState({ fornecedor_id: '', observacao: '', previsao_retorno: '' });
+  const [formRetorno, setFormRetorno] = useState({ base_destino_id: '', condicao: 'reparada' });
+  const [form, setForm] = useState({ descricao: '', categoria: '', base_atual_id: '' });
 
-  useEffect(() => {
-    setBaseFiltro(searchParams.get('base') || '');
-  }, [searchParams]);
+  useEffect(() => { setBaseFiltro(searchParams.get('base') || ''); }, [searchParams]);
 
-  const carregarDados = async () => {
+  const carregarDados = async (signal?: AbortSignal) => {
     try {
       const [resPecas, resBases, resFornecedores, resMovimentacoes] = await Promise.all([
-        api.get('/peca'),
-        api.get(`/empresa/${usuario?.empresa_id}/bases`),
-        api.get('/fornecedor'),
-        api.get('/movimentacao'),
+        api.get('/peca', { signal }),
+        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
+        api.get('/fornecedor', { signal }),
+        api.get('/movimentacao', { signal }),
       ]);
       setPecas(resPecas.data);
       setBases(resBases.data);
       setFornecedores(resFornecedores.data);
-
       const movimentacoes: Movimentacao[] = resMovimentacoes.data;
       const maisRecentePorPeca: Record<string, string> = {};
       movimentacoes.forEach((m) => {
         const atual = maisRecentePorPeca[m.peca_id];
-        if (!atual || new Date(m.data_envio) > new Date(atual)) {
-          maisRecentePorPeca[m.peca_id] = m.data_envio;
-        }
+        if (!atual || new Date(m.data_envio) > new Date(atual)) maisRecentePorPeca[m.peca_id] = m.data_envio;
       });
       setUltimaMovPorPeca(maisRecentePorPeca);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_CANCELED') console.error(error);
     } finally {
       setCarregando(false);
     }
   };
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    const ac = new AbortController();
+    carregarDados(ac.signal);
+    return () => ac.abort();
+  }, []);
 
   const handleSalvar = async () => {
     try {
@@ -153,9 +107,7 @@ const Pecas: React.FC = () => {
       setAbrirDialog(false);
       setForm({ descricao: '', categoria: '', base_atual_id: '' });
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const handleEnviarFabricante = async () => {
@@ -165,9 +117,7 @@ const Pecas: React.FC = () => {
       setPecaSelecionada(null);
       setFormFabricante({ fornecedor_id: '', observacao: '', previsao_retorno: '' });
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const handleRetornoFabricante = async () => {
@@ -177,67 +127,36 @@ const Pecas: React.FC = () => {
       setPecaSelecionada(null);
       setFormRetorno({ base_destino_id: '', condicao: 'reparada' });
       carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const pecasFiltradas = (() => {
-    let lista = filtroAguardando
-      ? pecas.filter(p => STATUS_AGUARDANDO.includes(p.status_atual))
-      : pecas;
-    if (statusParam && !filtroAguardando) {
-      lista = lista.filter(p => p.status_atual === statusParam);
-    }
-    if (baseFiltro) {
-      lista = lista.filter(p => p.base?.nome === baseFiltro);
-    }
+    let lista = filtroAguardando ? pecas.filter(p => STATUS_AGUARDANDO.includes(p.status_atual)) : pecas;
+    if (statusParam && !filtroAguardando) lista = lista.filter(p => p.status_atual === statusParam);
+    if (baseFiltro) lista = lista.filter(p => p.base?.nome === baseFiltro);
     return lista;
   })();
 
-  const titulo = filtroAguardando
-    ? 'Aguardando Remessa'
-    : statusParam === 'em_estoque_base'
-    ? 'Peças em Estoque'
-    : statusParam === 'em_transito'
-    ? 'Peças em Trânsito'
-    : 'Peças';
+  const titulo = filtroAguardando ? 'Aguardando Remessa' : statusParam === 'em_estoque_base' ? 'Peças em Estoque' : statusParam === 'em_transito' ? 'Peças em Trânsito' : 'Peças';
 
   return (
     <Layout>
       <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          {titulo}{baseFiltro ? ` — ${baseFiltro}` : ''}
-        </Typography>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>{titulo}{baseFiltro ? ` — ${baseFiltro}` : ''}</Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <TextField
-            select
-            size="small"
-            label="Filtrar por Base"
-            value={baseFiltro}
-            onChange={(e) => setBaseFiltro(e.target.value)}
-            sx={{ minWidth: 200 }}
-          >
+          <TextField select size="small" label="Filtrar por Base" value={baseFiltro} onChange={(e) => setBaseFiltro(e.target.value)} sx={{ minWidth: 200 }}>
             <MenuItem value="">Todas as Bases</MenuItem>
-            {bases.map((b) => (
-              <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>
-            ))}
+            {bases.map((b) => <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>)}
           </TextField>
-          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecasFiltradas)}>
-            Exportar Excel
-          </Button>
+          <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecasFiltradas)}>Exportar Excel</Button>
           {!filtroAguardando && !statusParam && (
-            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-              Nova Peça
-            </Button>
+            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Nova Peça</Button>
           )}
         </Box>
       </Box>
 
       {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
-          <CircularProgress />
-        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
       ) : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
@@ -256,56 +175,25 @@ const Pecas: React.FC = () => {
               {pecasFiltradas.map((peca) => {
                 const precisaAlerta = STATUS_AGUARDANDO.includes(peca.status_atual);
                 const dataReferencia = ultimaMovPorPeca[peca.id] || peca.criado_em;
-                const prazo = precisaAlerta && dataReferencia
-                  ? calcularTempoAberto(dataReferencia, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS)
-                  : null;
-
+                const prazo = precisaAlerta && dataReferencia ? calcularTempoAberto(dataReferencia, LIMITE_ATENCAO_DIAS, LIMITE_CRITICO_DIAS) : null;
                 return (
                   <TableRow key={peca.id} hover>
-                    <TableCell>
-                      <Typography variant="caption">{peca.codigo_qr}</Typography>
-                    </TableCell>
+                    <TableCell><Typography variant="caption">{peca.codigo_qr}</Typography></TableCell>
                     <TableCell>{peca.descricao}</TableCell>
                     <TableCell>{peca.categoria}</TableCell>
                     <TableCell>
-                      {peca.base ? `${peca.base.nome} - ${peca.base.estado}` :
-                       peca.tecnico ? 'Com Técnico' :
-                       peca.status_atual === 'em_reparo_fabricante' ? 'No Fabricante' : 'Instalada'}
+                      {peca.base ? `${peca.base.nome} - ${peca.base.estado}` : peca.tecnico ? 'Com Técnico' : peca.status_atual === 'em_reparo_fabricante' ? 'No Fabricante' : 'Instalada'}
                     </TableCell>
+                    <TableCell><Chip label={statusLabels[peca.status_atual] || peca.status_atual} color={statusCores[peca.status_atual] || 'default'} size="small" /></TableCell>
+                    <TableCell>{prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={statusLabels[peca.status_atual] || peca.status_atual}
-                        color={statusCores[peca.status_atual] || 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title="Ver QR Code">
-                        <IconButton color="primary" onClick={() => setQrSelecionado(peca)}>
-                          <QrCode />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Histórico e Vida Útil">
-                        <IconButton color="info" onClick={() => navigate(`/pecas/${peca.id}/historico`)}>
-                          <History />
-                        </IconButton>
-                      </Tooltip>
+                      <Tooltip title="Ver QR Code"><IconButton color="primary" onClick={() => setQrSelecionado(peca)}><QrCode /></IconButton></Tooltip>
+                      <Tooltip title="Histórico e Vida Útil"><IconButton color="info" onClick={() => navigate(`/pecas/${peca.id}/historico`)}><History /></IconButton></Tooltip>
                       {peca.status_atual === 'defeituosa_aguardando_analise' && (
-                        <Tooltip title="Enviar ao Fabricante">
-                          <IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}>
-                            <Factory />
-                          </IconButton>
-                        </Tooltip>
+                        <Tooltip title="Enviar ao Fabricante"><IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}><Factory /></IconButton></Tooltip>
                       )}
                       {peca.status_atual === 'em_reparo_fabricante' && (
-                        <Tooltip title="Registrar Retorno do Fabricante">
-                          <IconButton color="success" onClick={() => { setPecaSelecionada(peca); setAbrirRetorno(true); }}>
-                            <AssignmentReturn />
-                          </IconButton>
-                        </Tooltip>
+                        <Tooltip title="Registrar Retorno do Fabricante"><IconButton color="success" onClick={() => { setPecaSelecionada(peca); setAbrirRetorno(true); }}><AssignmentReturn /></IconButton></Tooltip>
                       )}
                     </TableCell>
                   </TableRow>
@@ -316,23 +204,13 @@ const Pecas: React.FC = () => {
         </TableContainer>
       )}
 
-      {qrSelecionado && (
-        <QrCodeModal
-          aberto={!!qrSelecionado}
-          onFechar={() => setQrSelecionado(null)}
-          codigo={qrSelecionado.codigo_qr}
-          descricao={qrSelecionado.descricao}
-          categoria={qrSelecionado.categoria}
-        />
-      )}
+      {qrSelecionado && <QrCodeModal aberto={!!qrSelecionado} onFechar={() => setQrSelecionado(null)} codigo={qrSelecionado.codigo_qr} descricao={qrSelecionado.descricao} categoria={qrSelecionado.categoria} />}
 
       <Dialog open={abrirFabricante} onClose={() => setAbrirFabricante(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Enviar ao Fabricante</DialogTitle>
         <DialogContent>
           <TextField select fullWidth label="Fornecedor" value={formFabricante.fornecedor_id} onChange={(e) => setFormFabricante({ ...formFabricante, fornecedor_id: e.target.value })} sx={{ mt: 2, mb: 2 }}>
-            {fornecedores.map((f) => (
-              <MenuItem key={f.id} value={f.id}>{f.nome}</MenuItem>
-            ))}
+            {fornecedores.map((f) => <MenuItem key={f.id} value={f.id}>{f.nome}</MenuItem>)}
           </TextField>
           <TextField fullWidth label="Observação" value={formFabricante.observacao} onChange={(e) => setFormFabricante({ ...formFabricante, observacao: e.target.value })} sx={{ mb: 2 }} multiline rows={2} />
           <TextField fullWidth label="Previsão de Retorno" type="date" value={formFabricante.previsao_retorno} onChange={(e) => setFormFabricante({ ...formFabricante, previsao_retorno: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
@@ -355,9 +233,7 @@ const Pecas: React.FC = () => {
           </FormControl>
           {formRetorno.condicao === 'reparada' && (
             <TextField select fullWidth label="Base de Destino" value={formRetorno.base_destino_id} onChange={(e) => setFormRetorno({ ...formRetorno, base_destino_id: e.target.value })}>
-              {bases.map((b) => (
-                <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
-              ))}
+              {bases.map((b) => <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>)}
             </TextField>
           )}
         </DialogContent>
@@ -373,9 +249,7 @@ const Pecas: React.FC = () => {
           <TextField fullWidth label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} sx={{ mt: 2, mb: 2 }} />
           <TextField fullWidth label="Categoria" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} sx={{ mb: 2 }} />
           <TextField select fullWidth label="Base Atual" value={form.base_atual_id} onChange={(e) => setForm({ ...form, base_atual_id: e.target.value })}>
-            {bases.map((b) => (
-              <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>
-            ))}
+            {bases.map((b) => <MenuItem key={b.id} value={b.id}>{b.nome} - {b.estado}</MenuItem>)}
           </TextField>
         </DialogContent>
         <DialogActions>
