@@ -47,18 +47,19 @@ const Dashboard: React.FC = () => {
     const ac = new AbortController();
     const carregarDados = async () => {
       try {
+        const empresa_id = usuario?.empresa_id || JSON.parse(localStorage.getItem('usuario') || '{}')?.empresa_id;
         const [resBases, resEquipamentos, resPecas, resAfericoes, resMovimentacoes] = await Promise.all([
-          api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal: ac.signal }),
+          empresa_id ? api.get(`/empresa/${empresa_id}/bases`, { signal: ac.signal }) : Promise.resolve({ data: [] }),
           api.get('/equipamento', { signal: ac.signal }),
           api.get('/peca', { signal: ac.signal }),
           api.get('/afericao', { signal: ac.signal }),
           api.get('/movimentacao', { signal: ac.signal }),
         ]);
-        setBases(resBases.data);
-        setEquipamentos(resEquipamentos.data);
-        setPecas(resPecas.data);
-        setAfericoes(resAfericoes.data);
-        setMovimentacoes(resMovimentacoes.data);
+        setBases(resBases.data ?? []);
+        setEquipamentos(resEquipamentos.data ?? []);
+        setPecas(resPecas.data ?? []);
+        setAfericoes(resAfericoes.data ?? []);
+        setMovimentacoes(resMovimentacoes.data ?? []);
       } catch (error: any) {
         if (error?.code !== 'ERR_CANCELED') console.error('Erro ao carregar dados:', error);
       } finally {
