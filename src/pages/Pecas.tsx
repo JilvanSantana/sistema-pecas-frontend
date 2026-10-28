@@ -17,30 +17,23 @@ import { calcularTempoAberto } from '../utils/prazos';
 import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Peca {
-  id: string;
-  codigo_qr: string;
-  descricao: string;
-  categoria: string;
-  status_atual: string;
-  criado_em: string;
+  id: string; codigo_qr: string; descricao: string; categoria: string;
+  status_atual: string; criado_em: string;
   base: { nome: string; estado: string } | null;
   tecnico: { usuario: { nome: string } } | null;
 }
-
 interface Movimentacao { peca_id: string; data_envio: string; }
 
 const statusCores: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   em_estoque_base: 'success', em_transito: 'warning', em_posse_tecnico: 'info',
-  instalada_equipamento: 'default', nao_localizada: 'error', em_reparo_fabricante: 'warning',
-  defeituosa_aguardando_analise: 'error', descartada: 'default',
+  instalada_equipamento: 'default', nao_localizada: 'error',
+  em_reparo_fabricante: 'warning', defeituosa_aguardando_analise: 'error', descartada: 'default',
 };
-
 const statusLabels: Record<string, string> = {
   em_estoque_base: 'Em Estoque', em_transito: 'Em Trânsito', em_posse_tecnico: 'Com Técnico',
-  instalada_equipamento: 'Instalada', nao_localizada: 'Não Localizada', em_reparo_fabricante: 'Em Reparo',
-  defeituosa_aguardando_analise: 'Defeituosa', descartada: 'Descartada',
+  instalada_equipamento: 'Instalada', nao_localizada: 'Não Localizada',
+  em_reparo_fabricante: 'Em Reparo', defeituosa_aguardando_analise: 'Defeituosa', descartada: 'Descartada',
 };
-
 const STATUS_AGUARDANDO = ['em_transito', 'defeituosa_aguardando_analise', 'em_reparo_fabricante'];
 const LIMITE_ATENCAO_DIAS = 7;
 const LIMITE_CRITICO_DIAS = 15;
@@ -52,7 +45,6 @@ const Pecas: React.FC = () => {
   const [searchParams] = useSearchParams();
   const statusParam = searchParams.get('status') || '';
   const filtroAguardando = location.pathname === '/aguardando-remessa';
-
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [ultimaMovPorPeca, setUltimaMovPorPeca] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
@@ -72,9 +64,10 @@ const Pecas: React.FC = () => {
 
   const carregarDados = async (signal?: AbortSignal) => {
     try {
+      const empresa_id = usuario?.empresa_id || JSON.parse(localStorage.getItem('usuario') || '{}')?.empresa_id;
       const [resPecas, resBases, resFornecedores, resMovimentacoes] = await Promise.all([
         api.get('/peca', { signal }),
-        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
+        empresa_id ? api.get(`/empresa/${empresa_id}/bases`, { signal }) : Promise.resolve({ data: [] }),
         api.get('/fornecedor', { signal }),
         api.get('/movimentacao', { signal }),
       ]);
@@ -90,44 +83,22 @@ const Pecas: React.FC = () => {
       setUltimaMovPorPeca(maisRecentePorPeca);
     } catch (error: any) {
       if (error?.code !== 'ERR_CANCELED') console.error(error);
-    } finally {
-      setCarregando(false);
-    }
+    } finally { setCarregando(false); }
   };
 
-  useEffect(() => {
-    const ac = new AbortController();
-    carregarDados(ac.signal);
-    return () => ac.abort();
-  }, []);
+  useEffect(() => { const ac = new AbortController(); carregarDados(ac.signal); return () => ac.abort(); }, []);
 
   const handleSalvar = async () => {
-    try {
-      await api.post('/peca', form);
-      setAbrirDialog(false);
-      setForm({ descricao: '', categoria: '', base_atual_id: '' });
-      carregarDados();
-    } catch (error) { console.error(error); }
+    try { await api.post('/peca', form); setAbrirDialog(false); setForm({ descricao: '', categoria: '', base_atual_id: '' }); carregarDados(); }
+    catch (error) { console.error(error); }
   };
-
   const handleEnviarFabricante = async () => {
-    try {
-      await api.post(`/peca/${pecaSelecionada?.id}/enviar-fabricante`, formFabricante);
-      setAbrirFabricante(false);
-      setPecaSelecionada(null);
-      setFormFabricante({ fornecedor_id: '', observacao: '', previsao_retorno: '' });
-      carregarDados();
-    } catch (error) { console.error(error); }
+    try { await api.post(`/peca/${pecaSelecionada?.id}/enviar-fabricante`, formFabricante); setAbrirFabricante(false); setPecaSelecionada(null); setFormFabricante({ fornecedor_id: '', observacao: '', previsao_retorno: '' }); carregarDados(); }
+    catch (error) { console.error(error); }
   };
-
   const handleRetornoFabricante = async () => {
-    try {
-      await api.post(`/peca/${pecaSelecionada?.id}/retorno-fabricante`, formRetorno);
-      setAbrirRetorno(false);
-      setPecaSelecionada(null);
-      setFormRetorno({ base_destino_id: '', condicao: 'reparada' });
-      carregarDados();
-    } catch (error) { console.error(error); }
+    try { await api.post(`/peca/${pecaSelecionada?.id}/retorno-fabricante`, formRetorno); setAbrirRetorno(false); setPecaSelecionada(null); setFormRetorno({ base_destino_id: '', condicao: 'reparada' }); carregarDados(); }
+    catch (error) { console.error(error); }
   };
 
   const pecasFiltradas = (() => {
@@ -149,15 +120,10 @@ const Pecas: React.FC = () => {
             {bases.map((b) => <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>)}
           </TextField>
           <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecasFiltradas)}>Exportar Excel</Button>
-          {!filtroAguardando && !statusParam && (
-            <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Nova Peça</Button>
-          )}
+          {!filtroAguardando && !statusParam && <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Nova Peça</Button>}
         </Box>
       </Box>
-
-      {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
-      ) : (
+      {carregando ? <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box> : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
             <TableHead>
@@ -181,20 +147,14 @@ const Pecas: React.FC = () => {
                     <TableCell><Typography variant="caption">{peca.codigo_qr}</Typography></TableCell>
                     <TableCell>{peca.descricao}</TableCell>
                     <TableCell>{peca.categoria}</TableCell>
-                    <TableCell>
-                      {peca.base ? `${peca.base.nome} - ${peca.base.estado}` : peca.tecnico ? 'Com Técnico' : peca.status_atual === 'em_reparo_fabricante' ? 'No Fabricante' : 'Instalada'}
-                    </TableCell>
+                    <TableCell>{peca.base ? `${peca.base.nome} - ${peca.base.estado}` : peca.tecnico ? 'Com Técnico' : peca.status_atual === 'em_reparo_fabricante' ? 'No Fabricante' : 'Instalada'}</TableCell>
                     <TableCell><Chip label={statusLabels[peca.status_atual] || peca.status_atual} color={statusCores[peca.status_atual] || 'default'} size="small" /></TableCell>
                     <TableCell>{prazo ? <AlertaChip label={prazo.label} nivel={prazo.nivel} /> : '-'}</TableCell>
                     <TableCell>
                       <Tooltip title="Ver QR Code"><IconButton color="primary" onClick={() => setQrSelecionado(peca)}><QrCode /></IconButton></Tooltip>
                       <Tooltip title="Histórico e Vida Útil"><IconButton color="info" onClick={() => navigate(`/pecas/${peca.id}/historico`)}><History /></IconButton></Tooltip>
-                      {peca.status_atual === 'defeituosa_aguardando_analise' && (
-                        <Tooltip title="Enviar ao Fabricante"><IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}><Factory /></IconButton></Tooltip>
-                      )}
-                      {peca.status_atual === 'em_reparo_fabricante' && (
-                        <Tooltip title="Registrar Retorno do Fabricante"><IconButton color="success" onClick={() => { setPecaSelecionada(peca); setAbrirRetorno(true); }}><AssignmentReturn /></IconButton></Tooltip>
-                      )}
+                      {peca.status_atual === 'defeituosa_aguardando_analise' && <Tooltip title="Enviar ao Fabricante"><IconButton color="warning" onClick={() => { setPecaSelecionada(peca); setAbrirFabricante(true); }}><Factory /></IconButton></Tooltip>}
+                      {peca.status_atual === 'em_reparo_fabricante' && <Tooltip title="Registrar Retorno do Fabricante"><IconButton color="success" onClick={() => { setPecaSelecionada(peca); setAbrirRetorno(true); }}><AssignmentReturn /></IconButton></Tooltip>}
                     </TableCell>
                   </TableRow>
                 );
@@ -203,9 +163,7 @@ const Pecas: React.FC = () => {
           </Table>
         </TableContainer>
       )}
-
       {qrSelecionado && <QrCodeModal aberto={!!qrSelecionado} onFechar={() => setQrSelecionado(null)} codigo={qrSelecionado.codigo_qr} descricao={qrSelecionado.descricao} categoria={qrSelecionado.categoria} />}
-
       <Dialog open={abrirFabricante} onClose={() => setAbrirFabricante(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Enviar ao Fabricante</DialogTitle>
         <DialogContent>
@@ -220,7 +178,6 @@ const Pecas: React.FC = () => {
           <Button variant="contained" color="warning" onClick={handleEnviarFabricante}>Enviar</Button>
         </DialogActions>
       </Dialog>
-
       <Dialog open={abrirRetorno} onClose={() => setAbrirRetorno(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Retorno do Fabricante</DialogTitle>
         <DialogContent>
@@ -242,7 +199,6 @@ const Pecas: React.FC = () => {
           <Button variant="contained" color="success" onClick={handleRetornoFabricante}>Confirmar</Button>
         </DialogActions>
       </Dialog>
-
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Nova Peça</DialogTitle>
         <DialogContent>
@@ -260,5 +216,4 @@ const Pecas: React.FC = () => {
     </Layout>
   );
 };
-
 export default Pecas;

@@ -7,57 +7,25 @@ import {
 import { Add } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface OrdemServico {
-  id: string;
-  numero: string;
-  tipo: string;
-  status: string;
-  prioridade: string;
-  descricao: string;
-  criado_em: string;
-  equipamento: { tipo: string; numero_serie: string; localizacao_instalacao: string } | null;
+  id: string; tipo: string; status: string; data_abertura: string; data_conclusao: string | null;
+  equipamento: { tipo: string; modelo: string; numero_serie: string; localizacao_instalacao: string };
+  tecnico?: { usuario: { nome: string } };
 }
-
-interface Equipamento {
-  id: string;
-  tipo: string;
-  numero_serie: string;
-  localizacao_instalacao: string;
-}
-
-const statusCores: Record<string, 'warning' | 'info' | 'success' | 'error' | 'default'> = {
-  aberta: 'warning',
-  em_andamento: 'info',
-  concluida: 'success',
-  cancelada: 'default',
-};
-
-const statusLabels: Record<string, string> = {
-  aberta: 'Aberta',
-  em_andamento: 'Em Andamento',
-  concluida: 'Concluída',
-  cancelada: 'Cancelada',
-};
-
-const prioridadeCores: Record<string, 'error' | 'warning' | 'info'> = {
-  alta: 'error',
-  media: 'warning',
-  baixa: 'info',
-};
+const statusCores: Record<string, 'warning' | 'success' | 'info'> = { aberta: 'warning', em_andamento: 'info', concluida: 'success' };
+const statusLabels: Record<string, string> = { aberta: 'Aberta', em_andamento: 'Em Andamento', concluida: 'Concluída' };
+const tipoLabels: Record<string, string> = { corretiva: 'Corretiva', preventiva: 'Preventiva', afericao: 'Aferição' };
 
 const OrdensServico: React.FC = () => {
+  const { usuario } = useAuth();
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
-  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [equipamentos, setEquipamentos] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [abrirDialog, setAbrirDialog] = useState(false);
-  const [form, setForm] = useState({
-    equipamento_id: '',
-    tipo: 'corretiva',
-    prioridade: 'media',
-    descricao: '',
-  });
+  const [form, setForm] = useState({ equipamento_id: '', tipo: 'corretiva' });
 
   const carregarDados = async (signal?: AbortSignal) => {
     try {
@@ -69,102 +37,63 @@ const OrdensServico: React.FC = () => {
       setEquipamentos(resEquipamentos.data);
     } catch (error: any) {
       if (error?.code !== 'ERR_CANCELED') console.error(error);
-    } finally {
-      setCarregando(false);
-    }
+    } finally { setCarregando(false); }
   };
 
-  useEffect(() => {
-    const ac = new AbortController();
-    carregarDados(ac.signal);
-    return () => ac.abort();
-  }, []);
+  useEffect(() => { const ac = new AbortController(); carregarDados(ac.signal); return () => ac.abort(); }, []);
 
   const handleSalvar = async () => {
-    try {
-      await api.post('/ordem-servico', form);
-      setAbrirDialog(false);
-      setForm({ equipamento_id: '', tipo: 'corretiva', prioridade: 'media', descricao: '' });
-      carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    try { await api.post('/ordem-servico', form); setAbrirDialog(false); setForm({ equipamento_id: '', tipo: 'corretiva' }); carregarDados(); }
+    catch (error) { console.error(error); }
   };
 
   return (
     <Layout>
-      <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={cabecalhoPaginaFixo}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Ordens de Serviço</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>
-          Nova OS
-        </Button>
+        <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Nova O.S.</Button>
       </Box>
-
-      {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
-      ) : (
+      {carregando ? <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box> : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={celulaCabecalhoFixo}>Número</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Equipamento</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Tipo</TableCell>
-                <TableCell sx={celulaCabecalhoFixo}>Prioridade</TableCell>
-                <TableCell sx={celulaCabecalhoFixo}>Descrição</TableCell>
-                <TableCell sx={celulaCabecalhoFixo}>Data</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Técnico</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Abertura</TableCell>
+                <TableCell sx={celulaCabecalhoFixo}>Conclusão</TableCell>
                 <TableCell sx={celulaCabecalhoFixo}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {ordens.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#666' }}>
-                    Nenhuma ordem de serviço registrada
-                  </TableCell>
+                <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4, color: '#666' }}>Nenhuma ordem de serviço registrada ainda</TableCell></TableRow>
+              ) : ordens.map((os) => (
+                <TableRow key={os.id} hover>
+                  <TableCell>{os.equipamento?.tipo} — {os.equipamento?.modelo} ({os.equipamento?.localizacao_instalacao})</TableCell>
+                  <TableCell><Chip label={tipoLabels[os.tipo] || os.tipo} size="small" variant="outlined" /></TableCell>
+                  <TableCell>{os.tecnico?.usuario?.nome || 'Não atribuído'}</TableCell>
+                  <TableCell>{os.data_abertura ? new Date(os.data_abertura).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                  <TableCell>{os.data_conclusao ? new Date(os.data_conclusao).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                  <TableCell><Chip label={statusLabels[os.status] || os.status} color={statusCores[os.status] || 'default'} size="small" /></TableCell>
                 </TableRow>
-              ) : (
-                ordens.map((os) => (
-                  <TableRow key={os.id} hover>
-                    <TableCell>{os.numero}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{os.equipamento?.tipo}</Typography>
-                      <Typography variant="caption" color="text.secondary">{os.equipamento?.numero_serie} — {os.equipamento?.localizacao_instalacao}</Typography>
-                    </TableCell>
-                    <TableCell>{os.tipo}</TableCell>
-                    <TableCell>
-                      <Chip label={os.prioridade} color={prioridadeCores[os.prioridade] || 'default'} size="small" />
-                    </TableCell>
-                    <TableCell>{os.descricao}</TableCell>
-                    <TableCell>{new Date(os.criado_em).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>
-                      <Chip label={statusLabels[os.status] || os.status} color={statusCores[os.status] || 'default'} size="small" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
       )}
-
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Nova Ordem de Serviço</DialogTitle>
         <DialogContent>
           <TextField select fullWidth label="Equipamento" value={form.equipamento_id} onChange={(e) => setForm({ ...form, equipamento_id: e.target.value })} sx={{ mt: 2, mb: 2 }}>
-            {equipamentos.map((e) => <MenuItem key={e.id} value={e.id}>{e.tipo} — {e.numero_serie} ({e.localizacao_instalacao})</MenuItem>)}
+            {equipamentos.map((eq) => <MenuItem key={eq.id} value={eq.id}>{eq.tipo} — {eq.modelo} ({eq.localizacao_instalacao})</MenuItem>)}
           </TextField>
-          <TextField select fullWidth label="Tipo" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} sx={{ mb: 2 }}>
+          <TextField select fullWidth label="Tipo" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
             <MenuItem value="corretiva">Corretiva</MenuItem>
             <MenuItem value="preventiva">Preventiva</MenuItem>
-            <MenuItem value="preditiva">Preditiva</MenuItem>
+            <MenuItem value="afericao">Aferição</MenuItem>
           </TextField>
-          <TextField select fullWidth label="Prioridade" value={form.prioridade} onChange={(e) => setForm({ ...form, prioridade: e.target.value })} sx={{ mb: 2 }}>
-            <MenuItem value="alta">Alta</MenuItem>
-            <MenuItem value="media">Média</MenuItem>
-            <MenuItem value="baixa">Baixa</MenuItem>
-          </TextField>
-          <TextField fullWidth label="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} multiline rows={3} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbrirDialog(false)}>Cancelar</Button>
@@ -174,5 +103,4 @@ const OrdensServico: React.FC = () => {
     </Layout>
   );
 };
-
 export default OrdensServico;

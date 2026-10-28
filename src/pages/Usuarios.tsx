@@ -11,19 +11,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { containerTabelaFixa, celulaCabecalhoFixo, cabecalhoPaginaFixo } from '../styles/tabela';
 
 interface Usuario {
-  id: string;
-  nome: string;
-  email: string;
-  papel: string;
-  ativo: boolean;
+  id: string; nome: string; email: string; papel: string; ativo: boolean;
   base?: { nome: string; estado: string };
 }
-
 const papelLabels: Record<string, string> = {
-  admin_global: 'Administrador',
-  admin_base: 'Admin da Base',
-  operador: 'Operador',
-  tecnico: 'Técnico',
+  admin_global: 'Administrador', admin_base: 'Admin da Base', operador: 'Operador', tecnico: 'Técnico',
 };
 
 const Usuarios: React.FC = () => {
@@ -38,52 +30,32 @@ const Usuarios: React.FC = () => {
 
   const carregarDados = async (signal?: AbortSignal) => {
     try {
+      const empresa_id = usuario?.empresa_id || JSON.parse(localStorage.getItem('usuario') || '{}')?.empresa_id;
       const [resUsuarios, resBases] = await Promise.all([
         api.get('/empresa/usuarios', { signal }),
-        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
+        empresa_id ? api.get(`/empresa/${empresa_id}/bases`, { signal }) : Promise.resolve({ data: [] }),
       ]);
       setUsuarios(resUsuarios.data);
       setBases(resBases.data);
     } catch (error: any) {
       if (error?.code !== 'ERR_CANCELED') console.error(error);
-    } finally {
-      setCarregando(false);
-    }
+    } finally { setCarregando(false); }
   };
 
-  useEffect(() => {
-    const ac = new AbortController();
-    carregarDados(ac.signal);
-    return () => ac.abort();
-  }, []);
+  useEffect(() => { const ac = new AbortController(); carregarDados(ac.signal); return () => ac.abort(); }, []);
 
   const handleSalvar = async () => {
     try {
       await api.post('/empresa/usuarios', { ...form, base_id: form.base_id || undefined });
-      setAbrirDialog(false);
-      setForm({ nome: '', email: '', senha: '', papel: 'operador', base_id: '' });
-      carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+      setAbrirDialog(false); setForm({ nome: '', email: '', senha: '', papel: 'operador', base_id: '' }); carregarDados();
+    } catch (error) { console.error(error); }
   };
-
   const handleDeletar = async () => {
     if (!usuarioParaDeletar) return;
-    try {
-      await api.delete(`/empresa/usuarios/${usuarioParaDeletar.id}`);
-      setAbrirConfirmDelete(false);
-      setUsuarioParaDeletar(null);
-      carregarDados();
-    } catch (error) {
-      console.error(error);
-    }
+    try { await api.delete(`/empresa/usuarios/${usuarioParaDeletar.id}`); setAbrirConfirmDelete(false); setUsuarioParaDeletar(null); carregarDados(); }
+    catch (error) { console.error(error); }
   };
-
-  const confirmarDelete = (u: Usuario) => {
-    setUsuarioParaDeletar(u);
-    setAbrirConfirmDelete(true);
-  };
+  const confirmarDelete = (u: Usuario) => { setUsuarioParaDeletar(u); setAbrirConfirmDelete(true); };
 
   return (
     <Layout>
@@ -91,10 +63,7 @@ const Usuarios: React.FC = () => {
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Usuários</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Novo Usuário</Button>
       </Box>
-
-      {carregando ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>
-      ) : (
+      {carregando ? <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box> : (
         <TableContainer component={Paper} sx={containerTabelaFixa}>
           <Table stickyHeader>
             <TableHead>
@@ -117,9 +86,7 @@ const Usuarios: React.FC = () => {
                   <TableCell><Chip label={u.ativo ? 'Ativo' : 'Inativo'} color={u.ativo ? 'success' : 'default'} size="small" /></TableCell>
                   <TableCell>
                     <Tooltip title="Excluir usuário">
-                      <IconButton color="error" size="small" onClick={() => confirmarDelete(u)} disabled={u.id === usuario?.id}>
-                        <Delete />
-                      </IconButton>
+                      <IconButton color="error" size="small" onClick={() => confirmarDelete(u)} disabled={u.id === usuario?.id}><Delete /></IconButton>
                     </Tooltip>
                   </TableCell>
                 </TableRow>
@@ -128,7 +95,6 @@ const Usuarios: React.FC = () => {
           </Table>
         </TableContainer>
       )}
-
       <Dialog open={abrirDialog} onClose={() => setAbrirDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Novo Usuário</DialogTitle>
         <DialogContent>
@@ -151,7 +117,6 @@ const Usuarios: React.FC = () => {
           <Button variant="contained" onClick={handleSalvar}>Salvar</Button>
         </DialogActions>
       </Dialog>
-
       <Dialog open={abrirConfirmDelete} onClose={() => setAbrirConfirmDelete(false)}>
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
@@ -165,5 +130,4 @@ const Usuarios: React.FC = () => {
     </Layout>
   );
 };
-
 export default Usuarios;
