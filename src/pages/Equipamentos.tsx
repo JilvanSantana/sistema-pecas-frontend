@@ -145,9 +145,10 @@ const Equipamentos: React.FC = () => {
 
   const carregarDados = async (incluirArquivados = mostrarArquivados, signal?: AbortSignal) => {
     try {
+      const empresa_id = usuario?.empresa_id || JSON.parse(localStorage.getItem('usuario') || '{}')?.empresa_id;
       const [res, resBases, resContratos, resAfericoes] = await Promise.all([
         api.get(`/equipamento?incluir_arquivados=${incluirArquivados}`, { signal }),
-        api.get(`/empresa/${usuario?.empresa_id}/bases`, { signal }),
+        empresa_id ? api.get(`/empresa/${empresa_id}/bases`, { signal }) : Promise.resolve({ data: [] }),
         api.get('/contrato', { signal }),
         api.get('/afericao', { signal }),
       ]);
