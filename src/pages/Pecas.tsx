@@ -115,10 +115,12 @@ const Pecas: React.FC = () => {
       <Box sx={{ ...cabecalhoPaginaFixo, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>{titulo}{baseFiltro ? ` — ${baseFiltro}` : ''}</Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <TextField select size="small" label="Filtrar por Base" value={baseFiltro} onChange={(e) => setBaseFiltro(e.target.value)} sx={{ minWidth: 200 }}>
-            <MenuItem value="">Todas as Bases</MenuItem>
-            {bases.map((b) => <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>)}
-          </TextField>
+          {(usuario?.papel === 'super_admin' || usuario?.papel === 'admin_global') && (
+            <TextField select size="small" label="Filtrar por Base" value={baseFiltro} onChange={(e) => setBaseFiltro(e.target.value)} sx={{ minWidth: 200 }}>
+              <MenuItem value="">Todas as Bases</MenuItem>
+              {bases.map((b) => <MenuItem key={b.id} value={b.nome}>{b.nome} - {b.estado}</MenuItem>)}
+            </TextField>
+          )}
           <Button variant="outlined" startIcon={<Download />} onClick={() => exportarPecas(pecasFiltradas)}>Exportar Excel</Button>
           {!filtroAguardando && !statusParam && <Button variant="contained" startIcon={<Add />} onClick={() => setAbrirDialog(true)}>Nova Peça</Button>}
         </Box>
